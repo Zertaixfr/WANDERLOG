@@ -1,9 +1,9 @@
-// Globe 3D interactif avec Three.js — affiche les continents et les étapes du voyage
+// Globe 3D interactif — style carte du monde colorée
 import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 
-// URL du GeoJSON des frontières mondiales (simplifié, ~200kb)
-const GEOJSON_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json'
+// TopoJSON des pays
+const TOPOJSON_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json'
 
 // Convertir lat/lng en coordonnées 3D sur une sphère
 const latLngToVector3 = (lat, lng, radius) => {
@@ -49,34 +49,82 @@ const decodeArc = (topology, arcIndex) => {
   return coords
 }
 
-// Extraire toutes les lignes de frontières depuis le TopoJSON
-const extractBorders = (topology) => {
-  const lines = []
+// Extraire les polygones (contours remplis) et les lignes de frontières
+const extractCountryPolygons = (topology) => {
+  const polygons = []
   const countries = topology.objects.countries
-  if (!countries) return lines
+  if (!countries) return polygons
 
-  // Parcourir chaque pays et ses géométries
   const geometries = countries.geometries || []
   for (const geo of geometries) {
-    const arcsData = geo.type === 'MultiPolygon' ? geo.arcs.flat() : geo.arcs || []
-    for (const ring of arcsData) {
+    const allRings = []
+    if (geo.type === 'Polygon') {
+      allRings.push(geo.arcs)
+    } else if (geo.type === 'MultiPolygon') {
+      for (const polygon of geo.arcs) {
+        allRings.push(...polygon)
+      }
+    }
+
+    for (const ring of allRings) {
       const ringArcs = Array.isArray(ring) ? ring : [ring]
       const coords = []
       for (const arcIdx of ringArcs) {
         const decoded = decodeArc(topology, arcIdx)
-        // Éviter les doublons au point de jonction
         if (coords.length > 0 && decoded.length > 0) {
           coords.push(...decoded.slice(1))
         } else {
           coords.push(...decoded)
         }
       }
-      if (coords.length > 1) {
-        lines.push(coords)
+      if (coords.length > 2) {
+        polygons.push(coords)
       }
     }
   }
-  return lines
+  return polygons
+}
+
+// Trianguler un polygone sur la sphère (méthode fan simple)
+const triangulatePolygon = (coords, radius) => {
+  if (coords.length < 3) return []
+
+  const vertices = []
+  const center = latLngToVector3(
+    coords.reduce((s, c) => s + c[1], 0) / coords.length,
+    coords.reduce((s, c) => s + c[0], 0) / coords.length,
+    radius
+  )
+
+  for (let i = 0; i < coords.length - 1; i++) {
+    const v1 = latLngToVector3(coords[i][1], coords[i][0], radius)
+    const v2 = latLngToVector3(coords[i + 1][1], coords[i + 1][0], radius)
+    vertices.push(
+      center.x, center.y, center.z,
+      v1.x, v1.y, v1.z,
+      v2.x, v2.y, v2.z
+    )
+  }
+  return vertices
+}
+
+// Palette de couleurs pour les continents — tons naturels et chauds
+const getCountryColor = (index) => {
+  const colors = [
+    0x4a7c59, // Vert forêt
+    0x5b8c5a, // Vert sauge
+    0x6b9e6b, // Vert prairie
+    0x7bae7b, // Vert clair
+    0x8cb88c, // Vert doux
+    0x5a8f6e, // Vert émeraude doux
+    0x6d9a7a, // Vert mousse
+    0x4e8860, // Vert profond
+    0x79a87e, // Vert pastel
+    0x5c946e, // Vert naturel
+    0x689875, // Vert olive clair
+    0x74a680, // Vert tendre
+  ]
+  return colors[index % colors.length]
 }
 
 const Globe3D = ({ travelerStatus, posts = [] }) => {
@@ -84,7 +132,7 @@ const Globe3D = ({ travelerStatus, posts = [] }) => {
   const sceneRef = useRef(null)
   const [selectedStop, setSelectedStop] = useState(null)
 
-  // Étapes du voyage — extraites des posts
+  // Étapes du voyage
   const stops = posts
     .filter((p) => p.coordinates)
     .map((p) => ({
@@ -123,136 +171,196 @@ const Globe3D = ({ travelerStatus, posts = [] }) => {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     container.appendChild(renderer.domElement)
 
-    // Globe — sphère sombre
     const globeRadius = 1.5
-    const globeGeometry = new THREE.SphereGeometry(globeRadius, 64, 64)
-    const globeMaterial = new THREE.MeshBasicMaterial({
-      color: 0x0a0a1a,
-      transparent: true,
-      opacity: 0.95,
-    })
-    const globe = new THREE.Mesh(globeGeometry, globeMaterial)
-    scene.add(globe)
 
-    // Wireframe subtil (grille de méridiens/parallèles)
-    const wireframeGeometry = new THREE.SphereGeometry(globeRadius + 0.001, 36, 18)
-    const wireframeMaterial = new THREE.MeshBasicMaterial({
-      color: 0xf59e0b,
+    // Océan — sphère bleu profond
+    const oceanGeometry = new THREE.SphereGeometry(globeRadius, 64, 64)
+    const oceanMaterial = new THREE.MeshBasicMaterial({
+      color: 0x1a3a5c,
+    })
+    const ocean = new THREE.Mesh(oceanGeometry, oceanMaterial)
+    scene.add(ocean)
+
+    // Légère grille sur l'océan (méridiens/parallèles)
+    const gridGeometry = new THREE.SphereGeometry(globeRadius + 0.001, 24, 12)
+    const gridMaterial = new THREE.MeshBasicMaterial({
+      color: 0x2a5a8c,
       wireframe: true,
       transparent: true,
-      opacity: 0.04,
+      opacity: 0.08,
     })
-    const wireframe = new THREE.Mesh(wireframeGeometry, wireframeMaterial)
-    scene.add(wireframe)
+    const grid = new THREE.Mesh(gridGeometry, gridMaterial)
+    scene.add(grid)
 
-    // Halo atmosphérique
-    const haloGeometry = new THREE.SphereGeometry(globeRadius + 0.12, 48, 48)
+    // Halo atmosphérique bleu ciel
+    const haloGeometry = new THREE.SphereGeometry(globeRadius + 0.15, 48, 48)
     const haloMaterial = new THREE.MeshBasicMaterial({
-      color: 0xf59e0b,
+      color: 0x4da6ff,
       transparent: true,
-      opacity: 0.04,
+      opacity: 0.06,
       side: THREE.BackSide,
     })
     const halo = new THREE.Mesh(haloGeometry, haloMaterial)
     scene.add(halo)
 
-    // Groupe pour les frontières (tourne avec le globe)
-    const bordersGroup = new THREE.Group()
-    scene.add(bordersGroup)
+    // Deuxième halo plus large
+    const halo2Geometry = new THREE.SphereGeometry(globeRadius + 0.25, 48, 48)
+    const halo2Material = new THREE.MeshBasicMaterial({
+      color: 0x87ceeb,
+      transparent: true,
+      opacity: 0.03,
+      side: THREE.BackSide,
+    })
+    const halo2 = new THREE.Mesh(halo2Geometry, halo2Material)
+    scene.add(halo2)
+
+    // Groupe pour les continents et frontières
+    const landGroup = new THREE.Group()
+    scene.add(landGroup)
 
     // Groupe pour les marqueurs et arcs
     const markersGroup = new THREE.Group()
     scene.add(markersGroup)
 
-    // Charger les frontières des pays
-    fetch(GEOJSON_URL)
+    // Charger et dessiner les pays en couleur
+    fetch(TOPOJSON_URL)
       .then((res) => res.json())
       .then((topology) => {
-        const borders = extractBorders(topology)
+        const polygons = extractCountryPolygons(topology)
 
-        for (const line of borders) {
-          const points = []
-          for (const [lng, lat] of line) {
-            points.push(latLngToVector3(lat, lng, globeRadius + 0.003))
-          }
-          if (points.length < 2) continue
+        // Remplir les pays en couleur
+        polygons.forEach((coords, i) => {
+          const vertices = triangulatePolygon(coords, globeRadius + 0.004)
+          if (vertices.length === 0) return
+
+          const geometry = new THREE.BufferGeometry()
+          geometry.setAttribute(
+            'position',
+            new THREE.Float32BufferAttribute(vertices, 3)
+          )
+          geometry.computeVertexNormals()
+
+          const material = new THREE.MeshBasicMaterial({
+            color: getCountryColor(i),
+            transparent: true,
+            opacity: 0.85,
+            side: THREE.DoubleSide,
+          })
+
+          const mesh = new THREE.Mesh(geometry, material)
+          landGroup.add(mesh)
+        })
+
+        // Dessiner les frontières en lignes fines
+        polygons.forEach((coords) => {
+          const points = coords.map(([lng, lat]) =>
+            latLngToVector3(lat, lng, globeRadius + 0.006)
+          )
+          if (points.length < 2) return
 
           const geometry = new THREE.BufferGeometry().setFromPoints(points)
           const material = new THREE.LineBasicMaterial({
-            color: 0xf59e0b,
+            color: 0x2d5a3d,
             transparent: true,
-            opacity: 0.25,
+            opacity: 0.5,
           })
-          const borderLine = new THREE.Line(geometry, material)
-          bordersGroup.add(borderLine)
-        }
+          const line = new THREE.Line(geometry, material)
+          landGroup.add(line)
+        })
       })
       .catch((err) => console.error('Erreur chargement des frontières:', err))
 
-    // Marqueurs pour chaque étape
+    // Marqueurs pour chaque étape — style pin rouge/orange
     stops.forEach((stop) => {
       const pos = latLngToVector3(stop.lat, stop.lng, globeRadius + 0.02)
 
-      // Point du marqueur
-      const markerGeometry = new THREE.SphereGeometry(0.03, 16, 16)
-      const markerMaterial = new THREE.MeshBasicMaterial({ color: 0xf97316 })
+      // Pin principal
+      const markerGeometry = new THREE.SphereGeometry(0.035, 16, 16)
+      const markerMaterial = new THREE.MeshBasicMaterial({ color: 0xe74c3c })
       const marker = new THREE.Mesh(markerGeometry, markerMaterial)
       marker.position.copy(pos)
       marker.userData = { name: stop.name, country: stop.country }
       markersGroup.add(marker)
 
-      // Halo lumineux autour du marqueur
-      const glowGeometry = new THREE.SphereGeometry(0.05, 16, 16)
+      // Halo lumineux
+      const glowGeometry = new THREE.SphereGeometry(0.055, 16, 16)
       const glowMaterial = new THREE.MeshBasicMaterial({
-        color: 0xf59e0b,
+        color: 0xff6b6b,
         transparent: true,
         opacity: 0.3,
       })
       const glow = new THREE.Mesh(glowGeometry, glowMaterial)
       glow.position.copy(pos)
       markersGroup.add(glow)
+
+      // Anneau autour du marqueur
+      const ringGeometry = new THREE.RingGeometry(0.045, 0.055, 24)
+      const ringMaterial = new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.5,
+        side: THREE.DoubleSide,
+      })
+      const ring = new THREE.Mesh(ringGeometry, ringMaterial)
+      ring.position.copy(pos)
+      ring.lookAt(new THREE.Vector3(0, 0, 0))
+      markersGroup.add(ring)
     })
 
-    // Arcs lumineux entre les étapes consécutives
+    // Arcs entre les étapes — ligne dorée lumineuse
     for (let i = 0; i < stops.length - 1; i++) {
       const start = latLngToVector3(stops[i].lat, stops[i].lng, globeRadius + 0.02)
       const end = latLngToVector3(stops[i + 1].lat, stops[i + 1].lng, globeRadius + 0.02)
       const arcPoints = createArc(start, end, globeRadius)
       const arcGeometry = new THREE.BufferGeometry().setFromPoints(arcPoints)
       const arcMaterial = new THREE.LineBasicMaterial({
-        color: 0xf59e0b,
+        color: 0xffd700,
         transparent: true,
-        opacity: 0.6,
+        opacity: 0.7,
       })
       const arc = new THREE.Line(arcGeometry, arcMaterial)
       markersGroup.add(arc)
     }
 
-    // Pulse animé sur la position actuelle
+    // Pulse animé sur la position actuelle — vert vif
     let pulseGlow = null
     if (currentPosition) {
-      const pos = latLngToVector3(currentPosition.lat, currentPosition.lng, globeRadius + 0.02)
+      const pos = latLngToVector3(currentPosition.lat, currentPosition.lng, globeRadius + 0.025)
 
       const pulseMarker = new THREE.Mesh(
         new THREE.SphereGeometry(0.04, 16, 16),
-        new THREE.MeshBasicMaterial({ color: 0x22c55e })
+        new THREE.MeshBasicMaterial({ color: 0x2ecc71 })
       )
       pulseMarker.position.copy(pos)
       markersGroup.add(pulseMarker)
 
       pulseGlow = new THREE.Mesh(
-        new THREE.SphereGeometry(0.07, 16, 16),
+        new THREE.SphereGeometry(0.08, 16, 16),
         new THREE.MeshBasicMaterial({
-          color: 0x22c55e,
+          color: 0x2ecc71,
           transparent: true,
-          opacity: 0.4,
+          opacity: 0.35,
         })
       )
       pulseGlow.position.copy(pos)
       markersGroup.add(pulseGlow)
+
+      // Anneau blanc autour de la position actuelle
+      const posRing = new THREE.Mesh(
+        new THREE.RingGeometry(0.06, 0.075, 24),
+        new THREE.MeshBasicMaterial({
+          color: 0xffffff,
+          transparent: true,
+          opacity: 0.4,
+          side: THREE.DoubleSide,
+        })
+      )
+      posRing.position.copy(pos)
+      posRing.lookAt(new THREE.Vector3(0, 0, 0))
+      markersGroup.add(posRing)
     }
 
-    // Contrôles de rotation (drag to rotate)
+    // Contrôles de rotation
     let isDragging = false
     let previousMousePosition = { x: 0, y: 0 }
     let autoRotate = true
@@ -269,9 +377,9 @@ const Globe3D = ({ travelerStatus, posts = [] }) => {
     }
 
     const syncRotation = () => {
-      wireframe.rotation.copy(globe.rotation)
-      bordersGroup.rotation.copy(globe.rotation)
-      markersGroup.rotation.copy(globe.rotation)
+      grid.rotation.copy(ocean.rotation)
+      landGroup.rotation.copy(ocean.rotation)
+      markersGroup.rotation.copy(ocean.rotation)
     }
 
     const onMouseMove = (e) => {
@@ -281,8 +389,8 @@ const Globe3D = ({ travelerStatus, posts = [] }) => {
       const deltaX = x - previousMousePosition.x
       const deltaY = y - previousMousePosition.y
 
-      globe.rotation.y += deltaX * 0.005
-      globe.rotation.x += deltaY * 0.005
+      ocean.rotation.y += deltaX * 0.005
+      ocean.rotation.x += deltaY * 0.005
       syncRotation()
 
       previousMousePosition = { x, y }
@@ -300,7 +408,7 @@ const Globe3D = ({ travelerStatus, posts = [] }) => {
     renderer.domElement.addEventListener('touchmove', onMouseMove)
     renderer.domElement.addEventListener('touchend', onMouseUp)
 
-    // Raycaster pour détecter les clics sur les marqueurs
+    // Raycaster pour les clics sur marqueurs
     const raycaster = new THREE.Raycaster()
     const mouse = new THREE.Vector2()
 
@@ -327,15 +435,15 @@ const Globe3D = ({ travelerStatus, posts = [] }) => {
       time += 0.01
 
       if (autoRotate) {
-        globe.rotation.y += 0.002
+        ocean.rotation.y += 0.0015
         syncRotation()
       }
 
-      // Animation du pulse
+      // Pulse animé
       if (pulseGlow) {
         const scale = 1 + Math.sin(time * 3) * 0.4
         pulseGlow.scale.set(scale, scale, scale)
-        pulseGlow.material.opacity = 0.2 + Math.sin(time * 3) * 0.2
+        pulseGlow.material.opacity = 0.2 + Math.sin(time * 3) * 0.15
       }
 
       renderer.render(scene, camera)
@@ -371,6 +479,7 @@ const Globe3D = ({ travelerStatus, posts = [] }) => {
   return (
     <div className="globe-section">
       <h2 className="section-title">Mon parcours</h2>
+      <p className="section-subtitle">Faites glisser pour explorer le globe</p>
       <div className="globe-container" ref={mountRef}>
         {selectedStop && (
           <div className="globe-tooltip">
@@ -382,7 +491,7 @@ const Globe3D = ({ travelerStatus, posts = [] }) => {
         )}
       </div>
 
-      {/* Légende des étapes */}
+      {/* Légende */}
       {stops.length > 0 && (
         <div className="globe-legend">
           {stops.map((stop, i) => (
