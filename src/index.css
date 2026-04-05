@@ -52,11 +52,17 @@ body {
 
 #root {
   width: 100%;
-  max-width: 520px;
   margin: 0 auto;
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
+}
+
+/* Sur mobile, limiter la largeur du contenu */
+@media (max-width: 768px) {
+  #root {
+    max-width: 520px;
+  }
 }
 
 /* ============================================
@@ -405,6 +411,17 @@ body {
   padding: 0 16px;
 }
 
+/* Sur desktop, centrer le feed et les stats */
+@media (min-width: 769px) {
+  .feed-section,
+  .stats-section,
+  .create-post {
+    max-width: 560px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
 .section-title {
   font-family: var(--font-heading);
   font-size: 24px;
@@ -429,6 +446,20 @@ body {
   background: radial-gradient(ellipse at center, #111118 0%, #0a0a0f 100%);
   border: 1px solid var(--border-subtle);
   cursor: grab;
+}
+
+/* Sur desktop, le globe prend toute la hauteur disponible */
+@media (min-width: 769px) {
+  .globe-section {
+    padding-bottom: 32px;
+  }
+
+  .globe-container {
+    height: calc(100vh - 200px);
+    min-height: 500px;
+    max-height: 900px;
+    border-radius: var(--radius-xl);
+  }
 }
 
 .globe-container:active {
