@@ -1,4 +1,4 @@
-// Composant principal — routage entre Auth et contenu protégé
+// Composant principal — layout split : globe + profil voyageur sur desktop
 import { useState, useEffect } from 'react'
 import { useAuth } from './contexts/AuthContext'
 import { isFirebaseConfigured } from './services/firebase'
@@ -8,6 +8,7 @@ import Globe3D from './components/Globe3D'
 import Feed from './components/Feed'
 import Stats from './components/Stats'
 import CreatePost from './components/CreatePost'
+import TravelerProfile from './components/TravelerProfile'
 import { DEMO_POSTS, DEMO_TRAVELER_STATUS } from './services/demoData'
 
 function App() {
@@ -16,7 +17,6 @@ function App() {
   const [travelerStatus, setTravelerStatus] = useState(null)
   const [posts, setPosts] = useState([])
 
-  // Charger les données (Firestore en prod, mock en démo)
   useEffect(() => {
     if (!user) return
 
@@ -41,7 +41,6 @@ function App() {
     }
   }, [user, demoMode])
 
-  // Tracking GPS automatique pour l'admin
   useEffect(() => {
     if (!isAdmin || demoMode) return
     let watchId
@@ -57,7 +56,6 @@ function App() {
     }
   }, [isAdmin, demoMode])
 
-  // Écran de chargement
   if (loading) {
     return (
       <div className="loading-screen">
@@ -91,10 +89,19 @@ function App() {
       )}
 
       <main className="app-main">
+        {/* Vue Globe — layout split sur desktop */}
         {activeTab === 'globe' && (
-          <Globe3D travelerStatus={travelerStatus} posts={posts} />
+          <div className="globe-layout">
+            <div className="globe-panel">
+              <Globe3D travelerStatus={travelerStatus} posts={posts} />
+            </div>
+            <aside className="sidebar-panel">
+              <TravelerProfile travelerStatus={travelerStatus} posts={posts} />
+            </aside>
+          </div>
         )}
 
+        {/* Vue Journal */}
         {activeTab === 'feed' && (
           <div className="feed-wrapper">
             {!demoMode && <CreatePost />}
@@ -102,6 +109,7 @@ function App() {
           </div>
         )}
 
+        {/* Vue Stats */}
         {activeTab === 'stats' && (
           <Stats demoMode={demoMode} demoStatus={travelerStatus} />
         )}

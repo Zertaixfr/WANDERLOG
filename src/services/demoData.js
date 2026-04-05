@@ -64,16 +64,16 @@ export const DEMO_POSTS = [
 
 export const DEMO_COMMENTS = {
   'post-1': [
-    { id: 'c1', text: 'Trop beau ! Tu me donnes trop envie 😍', userName: 'Marie', userId: 'u1', createdAt: { toDate: () => new Date('2026-03-15') } },
+    { id: 'c1', text: 'Trop beau ! Tu me donnes trop envie \u{1F60D}', userName: 'Marie', userId: 'u1', createdAt: { toDate: () => new Date('2026-03-15') } },
     { id: 'c2', text: 'C\'est quel quartier exactement ?', userName: 'Lucas', userId: 'u2', createdAt: { toDate: () => new Date('2026-03-16') } },
   ],
   'post-2': [
-    { id: 'c3', text: 'Le trek vaut le coup même si c\'est dur ?', userName: 'Sophie', userId: 'u3', createdAt: { toDate: () => new Date('2026-03-02') } },
+    { id: 'c3', text: 'Le trek vaut le coup m\u00EAme si c\'est dur ?', userName: 'Sophie', userId: 'u3', createdAt: { toDate: () => new Date('2026-03-02') } },
   ],
   'post-4': [
-    { id: 'c4', text: 'Bon voyage Kilian !! 🎉', userName: 'Maman', userId: 'u4', createdAt: { toDate: () => new Date('2026-01-10') } },
-    { id: 'c5', text: 'Ramène des pastéis !!', userName: 'Théo', userId: 'u5', createdAt: { toDate: () => new Date('2026-01-11') } },
-    { id: 'c6', text: 'Profite à fond frérot', userName: 'Emma', userId: 'u6', createdAt: { toDate: () => new Date('2026-01-11') } },
+    { id: 'c4', text: 'Bon voyage Kilian !! \u{1F389}', userName: 'Maman', userId: 'u4', createdAt: { toDate: () => new Date('2026-01-10') } },
+    { id: 'c5', text: 'Ram\u00E8ne des past\u00E9is !!', userName: 'Th\u00E9o', userId: 'u5', createdAt: { toDate: () => new Date('2026-01-11') } },
+    { id: 'c6', text: 'Profite \u00E0 fond fr\u00E9rot', userName: 'Emma', userId: 'u6', createdAt: { toDate: () => new Date('2026-01-11') } },
   ],
 }
 
@@ -82,8 +82,51 @@ export const DEMO_TRAVELER_STATUS = {
   longitude: 139.6917,
   country: 'Japon',
   city: 'Tokyo',
+  bio: 'Dev fran\u00E7ais en tour du monde \u2014 \u00E0 la recherche de ramen, de couchers de soleil et d\'aventures.',
+  mood: '\u{1F60A} Heureux et fatigu\u00E9 apr\u00E8s 3h de marche dans Shibuya',
+  weather: { icon: '\u2600\uFE0F', temp: '22\u00B0C' },
   departureDate: { toDate: () => new Date('2026-01-10') },
-  countriesVisited: ['Portugal', 'Thaïlande', 'Indonésie', 'Japon'],
+  countriesVisited: ['Portugal', 'Tha\u00EFlande', 'Indon\u00E9sie', 'Japon'],
   totalKm: 18420,
   postsCount: 4,
+  nextDestinations: [
+    { city: 'S\u00E9oul', country: 'Cor\u00E9e du Sud', date: 'Avril' },
+    { city: 'Hano\u00EF', country: 'Vietnam', date: 'Mai' },
+    { city: 'Sydney', country: 'Australie', date: 'Juin' },
+  ],
+  bucketList: [
+    { text: 'Voir le lever de soleil sur le Mont Fuji', done: false },
+    { text: 'Manger des vrais tacos au Mexique', done: false },
+    { text: 'Plonger dans la Grande Barri\u00E8re de Corail', done: false },
+    { text: 'Faire le trek du Mont Batur \u00E0 Bali', done: true },
+    { text: 'Go\u00FBter les past\u00E9is de nata \u00E0 Bel\u00E9m', done: true },
+    { text: 'Visiter un temple bouddhiste en Tha\u00EFlande', done: true },
+    { text: 'Prendre le Shinkansen au Japon', done: true },
+  ],
+  tips: [
+    {
+      icon: '\u{1F35C}',
+      title: 'Fuunji Ramen',
+      description: 'Les meilleurs tsukemen de Tokyo. File d\'attente de 30min mais \u00E7a vaut le coup.',
+      location: 'Shinjuku, Tokyo',
+    },
+    {
+      icon: '\u{1F3D6}\uFE0F',
+      title: 'Nusa Penida',
+      description: '\u00CEle magnifique \u00E0 30min de bateau de Bali. Kelingking Beach est irr\u00E9el.',
+      location: 'Bali, Indon\u00E9sie',
+    },
+    {
+      icon: '\u{1F6F5}',
+      title: 'Louer un scooter',
+      description: 'Le meilleur moyen de d\u00E9couvrir Bali et Bangkok. ~5\u20AC/jour.',
+      location: 'Asie du Sud-Est',
+    },
+    {
+      icon: '\u{1F3DB}\uFE0F',
+      title: 'Alfama au coucher du soleil',
+      description: 'Monter au Miradouro da Gra\u00E7a pour la plus belle vue sur Lisbonne.',
+      location: 'Lisbonne, Portugal',
+    },
+  ],
 }
