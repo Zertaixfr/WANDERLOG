@@ -1,6 +1,9 @@
-// Globe 3D interactif avec Three.js — affiche les étapes du voyage
+// Globe 3D interactif avec Three.js — affiche les continents et les étapes du voyage
 import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
+
+// URL du GeoJSON des frontières mondiales (simplifié, ~200kb)
+const GEOJSON_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json'
 
 // Convertir lat/lng en coordonnées 3D sur une sphère
 const latLngToVector3 = (lat, lng, radius) => {
@@ -26,12 +29,62 @@ const createArc = (start, end, radius) => {
   return points
 }
 
+// Décoder les arcs TopoJSON en coordonnées [lng, lat]
+const decodeArc = (topology, arcIndex) => {
+  const isReversed = arcIndex < 0
+  const index = isReversed ? ~arcIndex : arcIndex
+  const arc = topology.arcs[index]
+  const coords = []
+  let x = 0, y = 0
+
+  for (const [dx, dy] of arc) {
+    x += dx
+    y += dy
+    const lng = x * topology.transform.scale[0] + topology.transform.translate[0]
+    const lat = y * topology.transform.scale[1] + topology.transform.translate[1]
+    coords.push([lng, lat])
+  }
+
+  if (isReversed) coords.reverse()
+  return coords
+}
+
+// Extraire toutes les lignes de frontières depuis le TopoJSON
+const extractBorders = (topology) => {
+  const lines = []
+  const countries = topology.objects.countries
+  if (!countries) return lines
+
+  // Parcourir chaque pays et ses géométries
+  const geometries = countries.geometries || []
+  for (const geo of geometries) {
+    const arcsData = geo.type === 'MultiPolygon' ? geo.arcs.flat() : geo.arcs || []
+    for (const ring of arcsData) {
+      const ringArcs = Array.isArray(ring) ? ring : [ring]
+      const coords = []
+      for (const arcIdx of ringArcs) {
+        const decoded = decodeArc(topology, arcIdx)
+        // Éviter les doublons au point de jonction
+        if (coords.length > 0 && decoded.length > 0) {
+          coords.push(...decoded.slice(1))
+        } else {
+          coords.push(...decoded)
+        }
+      }
+      if (coords.length > 1) {
+        lines.push(coords)
+      }
+    }
+  }
+  return lines
+}
+
 const Globe3D = ({ travelerStatus, posts = [] }) => {
   const mountRef = useRef(null)
   const sceneRef = useRef(null)
   const [selectedStop, setSelectedStop] = useState(null)
 
-  // Étapes du voyage — extraites des posts ou données statiques
+  // Étapes du voyage — extraites des posts
   const stops = posts
     .filter((p) => p.coordinates)
     .map((p) => ({
@@ -70,59 +123,86 @@ const Globe3D = ({ travelerStatus, posts = [] }) => {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     container.appendChild(renderer.domElement)
 
-    // Globe — sphère sombre avec wireframe ambre
+    // Globe — sphère sombre
     const globeRadius = 1.5
-    const globeGeometry = new THREE.SphereGeometry(globeRadius, 48, 48)
-
-    // Sphère de base (sombre)
+    const globeGeometry = new THREE.SphereGeometry(globeRadius, 64, 64)
     const globeMaterial = new THREE.MeshBasicMaterial({
       color: 0x0a0a1a,
       transparent: true,
-      opacity: 0.9,
+      opacity: 0.95,
     })
     const globe = new THREE.Mesh(globeGeometry, globeMaterial)
     scene.add(globe)
 
-    // Wireframe ambre
-    const wireframeGeometry = new THREE.SphereGeometry(globeRadius + 0.002, 32, 32)
+    // Wireframe subtil (grille de méridiens/parallèles)
+    const wireframeGeometry = new THREE.SphereGeometry(globeRadius + 0.001, 36, 18)
     const wireframeMaterial = new THREE.MeshBasicMaterial({
       color: 0xf59e0b,
       wireframe: true,
       transparent: true,
-      opacity: 0.08,
+      opacity: 0.04,
     })
     const wireframe = new THREE.Mesh(wireframeGeometry, wireframeMaterial)
     scene.add(wireframe)
 
     // Halo atmosphérique
-    const haloGeometry = new THREE.SphereGeometry(globeRadius + 0.15, 48, 48)
+    const haloGeometry = new THREE.SphereGeometry(globeRadius + 0.12, 48, 48)
     const haloMaterial = new THREE.MeshBasicMaterial({
       color: 0xf59e0b,
       transparent: true,
-      opacity: 0.03,
+      opacity: 0.04,
       side: THREE.BackSide,
     })
     const halo = new THREE.Mesh(haloGeometry, haloMaterial)
     scene.add(halo)
 
-    // Groupe pour les marqueurs et arcs (tourne avec le globe)
+    // Groupe pour les frontières (tourne avec le globe)
+    const bordersGroup = new THREE.Group()
+    scene.add(bordersGroup)
+
+    // Groupe pour les marqueurs et arcs
     const markersGroup = new THREE.Group()
     scene.add(markersGroup)
+
+    // Charger les frontières des pays
+    fetch(GEOJSON_URL)
+      .then((res) => res.json())
+      .then((topology) => {
+        const borders = extractBorders(topology)
+
+        for (const line of borders) {
+          const points = []
+          for (const [lng, lat] of line) {
+            points.push(latLngToVector3(lat, lng, globeRadius + 0.003))
+          }
+          if (points.length < 2) continue
+
+          const geometry = new THREE.BufferGeometry().setFromPoints(points)
+          const material = new THREE.LineBasicMaterial({
+            color: 0xf59e0b,
+            transparent: true,
+            opacity: 0.25,
+          })
+          const borderLine = new THREE.Line(geometry, material)
+          bordersGroup.add(borderLine)
+        }
+      })
+      .catch((err) => console.error('Erreur chargement des frontières:', err))
 
     // Marqueurs pour chaque étape
     stops.forEach((stop) => {
       const pos = latLngToVector3(stop.lat, stop.lng, globeRadius + 0.02)
 
       // Point du marqueur
-      const markerGeometry = new THREE.SphereGeometry(0.025, 16, 16)
+      const markerGeometry = new THREE.SphereGeometry(0.03, 16, 16)
       const markerMaterial = new THREE.MeshBasicMaterial({ color: 0xf97316 })
       const marker = new THREE.Mesh(markerGeometry, markerMaterial)
       marker.position.copy(pos)
       marker.userData = { name: stop.name, country: stop.country }
       markersGroup.add(marker)
 
-      // Halo autour du marqueur
-      const glowGeometry = new THREE.SphereGeometry(0.04, 16, 16)
+      // Halo lumineux autour du marqueur
+      const glowGeometry = new THREE.SphereGeometry(0.05, 16, 16)
       const glowMaterial = new THREE.MeshBasicMaterial({
         color: 0xf59e0b,
         transparent: true,
@@ -133,7 +213,7 @@ const Globe3D = ({ travelerStatus, posts = [] }) => {
       markersGroup.add(glow)
     })
 
-    // Arcs entre les étapes consécutives
+    // Arcs lumineux entre les étapes consécutives
     for (let i = 0; i < stops.length - 1; i++) {
       const start = latLngToVector3(stops[i].lat, stops[i].lng, globeRadius + 0.02)
       const end = latLngToVector3(stops[i + 1].lat, stops[i + 1].lng, globeRadius + 0.02)
@@ -142,27 +222,26 @@ const Globe3D = ({ travelerStatus, posts = [] }) => {
       const arcMaterial = new THREE.LineBasicMaterial({
         color: 0xf59e0b,
         transparent: true,
-        opacity: 0.5,
+        opacity: 0.6,
       })
       const arc = new THREE.Line(arcGeometry, arcMaterial)
       markersGroup.add(arc)
     }
 
     // Pulse animé sur la position actuelle
-    let pulseMarker = null
     let pulseGlow = null
     if (currentPosition) {
       const pos = latLngToVector3(currentPosition.lat, currentPosition.lng, globeRadius + 0.02)
 
-      pulseMarker = new THREE.Mesh(
-        new THREE.SphereGeometry(0.035, 16, 16),
+      const pulseMarker = new THREE.Mesh(
+        new THREE.SphereGeometry(0.04, 16, 16),
         new THREE.MeshBasicMaterial({ color: 0x22c55e })
       )
       pulseMarker.position.copy(pos)
       markersGroup.add(pulseMarker)
 
       pulseGlow = new THREE.Mesh(
-        new THREE.SphereGeometry(0.06, 16, 16),
+        new THREE.SphereGeometry(0.07, 16, 16),
         new THREE.MeshBasicMaterial({
           color: 0x22c55e,
           transparent: true,
@@ -177,15 +256,22 @@ const Globe3D = ({ travelerStatus, posts = [] }) => {
     let isDragging = false
     let previousMousePosition = { x: 0, y: 0 }
     let autoRotate = true
-    let rotationVelocity = { x: 0, y: 0 }
+    let resumeTimeout = null
 
     const onMouseDown = (e) => {
       isDragging = true
       autoRotate = false
+      if (resumeTimeout) clearTimeout(resumeTimeout)
       previousMousePosition = {
         x: e.clientX || e.touches?.[0]?.clientX || 0,
         y: e.clientY || e.touches?.[0]?.clientY || 0,
       }
+    }
+
+    const syncRotation = () => {
+      wireframe.rotation.copy(globe.rotation)
+      bordersGroup.rotation.copy(globe.rotation)
+      markersGroup.rotation.copy(globe.rotation)
     }
 
     const onMouseMove = (e) => {
@@ -195,21 +281,16 @@ const Globe3D = ({ travelerStatus, posts = [] }) => {
       const deltaX = x - previousMousePosition.x
       const deltaY = y - previousMousePosition.y
 
-      rotationVelocity = { x: deltaY * 0.005, y: deltaX * 0.005 }
       globe.rotation.y += deltaX * 0.005
       globe.rotation.x += deltaY * 0.005
-      wireframe.rotation.y = globe.rotation.y
-      wireframe.rotation.x = globe.rotation.x
-      markersGroup.rotation.y = globe.rotation.y
-      markersGroup.rotation.x = globe.rotation.x
+      syncRotation()
 
       previousMousePosition = { x, y }
     }
 
     const onMouseUp = () => {
       isDragging = false
-      // Reprendre l'auto-rotation après 3 secondes
-      setTimeout(() => { autoRotate = true }, 3000)
+      resumeTimeout = setTimeout(() => { autoRotate = true }, 3000)
     }
 
     renderer.domElement.addEventListener('mousedown', onMouseDown)
@@ -245,14 +326,12 @@ const Globe3D = ({ travelerStatus, posts = [] }) => {
       requestAnimationFrame(animate)
       time += 0.01
 
-      // Auto-rotation
       if (autoRotate) {
         globe.rotation.y += 0.002
-        wireframe.rotation.y = globe.rotation.y
-        markersGroup.rotation.y = globe.rotation.y
+        syncRotation()
       }
 
-      // Animation du pulse sur la position actuelle
+      // Animation du pulse
       if (pulseGlow) {
         const scale = 1 + Math.sin(time * 3) * 0.4
         pulseGlow.scale.set(scale, scale, scale)
@@ -283,6 +362,7 @@ const Globe3D = ({ travelerStatus, posts = [] }) => {
       renderer.domElement.removeEventListener('touchmove', onMouseMove)
       renderer.domElement.removeEventListener('touchend', onMouseUp)
       renderer.domElement.removeEventListener('click', onClick)
+      if (resumeTimeout) clearTimeout(resumeTimeout)
       renderer.dispose()
       container.removeChild(renderer.domElement)
     }
