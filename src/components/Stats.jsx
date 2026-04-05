@@ -1,14 +1,25 @@
 // Dashboard de statistiques — calculées depuis les données Firestore
+// Supporte le mode démo avec données mock
 import { useState, useEffect } from 'react'
-import { subscribeToTravelerStatus } from '../services/travelerService'
 
-const Stats = () => {
-  const [status, setStatus] = useState(null)
+const Stats = ({ demoMode = false, demoStatus = null }) => {
+  const [status, setStatus] = useState(demoStatus)
 
   useEffect(() => {
-    const unsubscribe = subscribeToTravelerStatus(setStatus)
+    if (demoMode) {
+      setStatus(demoStatus)
+      return
+    }
+
+    // Mode Firebase — écoute temps réel
+    let unsubscribe = () => {}
+    const init = async () => {
+      const { subscribeToTravelerStatus } = await import('../services/travelerService')
+      unsubscribe = subscribeToTravelerStatus(setStatus)
+    }
+    init()
     return () => unsubscribe()
-  }, [])
+  }, [demoMode, demoStatus])
 
   // Calculer le nombre de jours depuis le départ
   const getDaysSinceDeparture = () => {
@@ -26,9 +37,8 @@ const Stats = () => {
   const totalKm = status?.totalKm || 0
 
   // Données des barres de progression par pays
-  const countryProgress = countries.map((country, i) => ({
+  const countryProgress = countries.map((country) => ({
     name: country,
-    // Répartir visuellement les pourcentages
     percent: Math.min(100, Math.round(100 / Math.max(countries.length, 1))),
   }))
 
@@ -36,7 +46,6 @@ const Stats = () => {
     <div className="stats-section">
       <h2 className="section-title">Statistiques</h2>
 
-      {/* Cartes de stats principales */}
       <div className="stats-grid">
         <div className="stat-card">
           <span className="stat-icon">&#128197;</span>
@@ -64,7 +73,6 @@ const Stats = () => {
         </div>
       </div>
 
-      {/* Barres de progression par pays */}
       {countries.length > 0 && (
         <div className="country-progress">
           <h3 className="progress-title">Temps par pays</h3>
@@ -85,7 +93,6 @@ const Stats = () => {
         </div>
       )}
 
-      {/* Message si pas encore de données */}
       {!status && (
         <div className="stats-empty">
           <p>Les statistiques apparaîtront dès le début du voyage</p>

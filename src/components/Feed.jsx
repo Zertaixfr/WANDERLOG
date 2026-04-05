@@ -1,7 +1,9 @@
 // Feed / Journal — affiche les posts du voyage avec likes et commentaires
+// Supporte le mode démo avec données mock
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { subscribeToPosts, toggleLike, addComment, subscribeToComments } from '../services/postService'
+import { isFirebaseConfigured } from '../services/firebase'
+import { DEMO_COMMENTS } from '../services/demoData'
 
 // Composant pour un commentaire individuel
 const Comment = ({ comment }) => {
@@ -20,25 +22,48 @@ const Comment = ({ comment }) => {
 }
 
 // Composant pour un post individuel
-const PostCard = ({ post }) => {
+const PostCard = ({ post, demoMode }) => {
   const { user } = useAuth()
   const [showComments, setShowComments] = useState(false)
   const [comments, setComments] = useState([])
+  const [localLikes, setLocalLikes] = useState(post.likesCount || 0)
+  const [hasLiked, setHasLiked] = useState(post.likes?.includes(user?.uid))
   const [newComment, setNewComment] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const hasLiked = post.likes?.includes(user?.uid)
   const postDate = post.createdAt?.toDate?.()
 
-  // Écouter les commentaires quand la section est ouverte
+  // Charger les commentaires quand la section est ouverte
   useEffect(() => {
     if (!showComments) return
-    const unsubscribe = subscribeToComments(post.id, setComments)
+
+    if (demoMode) {
+      // Mode démo — commentaires statiques
+      setComments(DEMO_COMMENTS[post.id] || [])
+      return
+    }
+
+    // Mode Firebase — écoute temps réel
+    let unsubscribe = () => {}
+    const init = async () => {
+      const { subscribeToComments } = await import('../services/postService')
+      unsubscribe = subscribeToComments(post.id, setComments)
+    }
+    init()
     return () => unsubscribe()
-  }, [showComments, post.id])
+  }, [showComments, post.id, demoMode])
 
   const handleLike = async () => {
     if (!user) return
+
+    if (demoMode) {
+      // Mode démo — like local
+      setHasLiked(!hasLiked)
+      setLocalLikes((prev) => prev + (hasLiked ? -1 : 1))
+      return
+    }
+
+    const { toggleLike } = await import('../services/postService')
     await toggleLike(post.id, user.uid)
   }
 
@@ -46,7 +71,26 @@ const PostCard = ({ post }) => {
     e.preventDefault()
     if (!newComment.trim() || !user || isSubmitting) return
     setIsSubmitting(true)
+
+    if (demoMode) {
+      // Mode démo — ajouter le commentaire localement
+      setComments((prev) => [
+        ...prev,
+        {
+          id: `demo-${Date.now()}`,
+          text: newComment.trim(),
+          userName: user.displayName || 'Voyageur',
+          userId: user.uid,
+          createdAt: { toDate: () => new Date() },
+        },
+      ])
+      setNewComment('')
+      setIsSubmitting(false)
+      return
+    }
+
     try {
+      const { addComment } = await import('../services/postService')
       await addComment(post.id, {
         text: newComment.trim(),
         userId: user.uid,
@@ -110,7 +154,7 @@ const PostCard = ({ post }) => {
           onClick={handleLike}
         >
           <span>{hasLiked ? '&#10084;' : '&#9825;'}</span>
-          <span>{post.likesCount || 0}</span>
+          <span>{demoMode ? localLikes : (post.likesCount || 0)}</span>
         </button>
         <button
           className="action-btn comment-btn"
@@ -157,17 +201,29 @@ const PostCard = ({ post }) => {
 }
 
 // Composant Feed principal
-const Feed = () => {
+const Feed = ({ demoMode = false, demoPosts = [] }) => {
   const [posts, setPosts] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(!demoMode)
 
   useEffect(() => {
-    const unsubscribe = subscribeToPosts((fetchedPosts) => {
-      setPosts(fetchedPosts)
+    if (demoMode) {
+      setPosts(demoPosts)
       setLoading(false)
-    })
+      return
+    }
+
+    // Mode Firebase
+    let unsubscribe = () => {}
+    const init = async () => {
+      const { subscribeToPosts } = await import('../services/postService')
+      unsubscribe = subscribeToPosts((fetchedPosts) => {
+        setPosts(fetchedPosts)
+        setLoading(false)
+      })
+    }
+    init()
     return () => unsubscribe()
-  }, [])
+  }, [demoMode])
 
   if (loading) {
     return (
@@ -191,7 +247,7 @@ const Feed = () => {
       ) : (
         <div className="posts-list">
           {posts.map((post) => (
-            <PostCard key={post.id} post={post} />
+            <PostCard key={post.id} post={post} demoMode={demoMode} />
           ))}
         </div>
       )}

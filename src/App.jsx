@@ -1,42 +1,64 @@
 // Composant principal — routage entre Auth et contenu protégé
+// Supporte le mode démo (sans Firebase) avec des données mock
 import { useState, useEffect } from 'react'
 import { useAuth } from './contexts/AuthContext'
+import { isFirebaseConfigured } from './services/firebase'
 import AuthScreen from './components/AuthScreen'
 import Header from './components/Header'
 import Globe3D from './components/Globe3D'
 import Feed from './components/Feed'
 import Stats from './components/Stats'
 import CreatePost from './components/CreatePost'
-import { subscribeToTravelerStatus } from './services/travelerService'
-import { subscribeToPosts } from './services/postService'
-import { startGeoTracking, stopGeoTracking } from './services/travelerService'
+import { DEMO_POSTS, DEMO_TRAVELER_STATUS } from './services/demoData'
 
 function App() {
-  const { user, isAdmin, loading } = useAuth()
+  const { user, isAdmin, loading, demoMode } = useAuth()
   const [activeTab, setActiveTab] = useState('globe')
   const [travelerStatus, setTravelerStatus] = useState(null)
   const [posts, setPosts] = useState([])
 
-  // Écouter le statut du voyageur en temps réel
+  // Charger les données (Firestore en prod, mock en démo)
   useEffect(() => {
     if (!user) return
-    const unsubscribe = subscribeToTravelerStatus(setTravelerStatus)
-    return () => unsubscribe()
-  }, [user])
 
-  // Écouter les posts pour le globe (coordonnées)
-  useEffect(() => {
-    if (!user) return
-    const unsubscribe = subscribeToPosts(setPosts)
-    return () => unsubscribe()
-  }, [user])
+    if (demoMode) {
+      // Mode démo — données statiques
+      setTravelerStatus(DEMO_TRAVELER_STATUS)
+      setPosts(DEMO_POSTS)
+      return
+    }
 
-  // Tracking GPS automatique pour l'admin
+    // Mode Firebase — écoute temps réel
+    let unsubPosts, unsubStatus
+    const init = async () => {
+      const { subscribeToPosts } = await import('./services/postService')
+      const { subscribeToTravelerStatus } = await import('./services/travelerService')
+      unsubPosts = subscribeToPosts(setPosts)
+      unsubStatus = subscribeToTravelerStatus(setTravelerStatus)
+    }
+    init()
+
+    return () => {
+      unsubPosts?.()
+      unsubStatus?.()
+    }
+  }, [user, demoMode])
+
+  // Tracking GPS automatique pour l'admin (mode Firebase uniquement)
   useEffect(() => {
-    if (!isAdmin) return
-    const watchId = startGeoTracking()
-    return () => stopGeoTracking(watchId)
-  }, [isAdmin])
+    if (!isAdmin || demoMode) return
+    let watchId
+    const init = async () => {
+      const { startGeoTracking, stopGeoTracking } = await import('./services/travelerService')
+      watchId = startGeoTracking()
+    }
+    init()
+    return () => {
+      if (watchId !== undefined) {
+        import('./services/travelerService').then(({ stopGeoTracking }) => stopGeoTracking(watchId))
+      }
+    }
+  }, [isAdmin, demoMode])
 
   // Écran de chargement
   if (loading) {
@@ -51,7 +73,7 @@ function App() {
     )
   }
 
-  // Si non connecté, afficher l'écran d'auth
+  // Si non connecté (mode Firebase uniquement), afficher l'écran d'auth
   if (!user) {
     return <AuthScreen />
   }
@@ -61,22 +83,28 @@ function App() {
     <div className="app">
       <Header activeTab={activeTab} setActiveTab={setActiveTab} />
 
+      {/* Bannière mode démo */}
+      {demoMode && (
+        <div className="demo-banner">
+          Mode démo — Configurez Firebase dans <code>.env</code> pour activer toutes les fonctionnalités
+        </div>
+      )}
+
       <main className="app-main">
-        {/* Globe 3D */}
         {activeTab === 'globe' && (
           <Globe3D travelerStatus={travelerStatus} posts={posts} />
         )}
 
-        {/* Feed / Journal */}
         {activeTab === 'feed' && (
           <>
-            <CreatePost />
-            <Feed />
+            {!demoMode && <CreatePost />}
+            <Feed demoMode={demoMode} demoPosts={posts} />
           </>
         )}
 
-        {/* Stats */}
-        {activeTab === 'stats' && <Stats />}
+        {activeTab === 'stats' && (
+          <Stats demoMode={demoMode} demoStatus={travelerStatus} />
+        )}
       </main>
 
       <footer className="app-footer">
