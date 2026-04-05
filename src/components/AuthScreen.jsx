@@ -37,7 +37,8 @@ const AuthScreen = () => {
         'auth/invalid-credential': 'Identifiants invalides',
         'auth/too-many-requests': 'Trop de tentatives, réessayez plus tard',
       }
-      setError(errorMessages[err.code] || 'Une erreur est survenue')
+      console.error('Erreur Firebase Auth:', err.code, err.message)
+      setError(errorMessages[err.code] || `Erreur : ${err.code || err.message}`)
     } finally {
       setLoading(false)
     }
