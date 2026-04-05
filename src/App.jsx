@@ -1,5 +1,4 @@
 // Composant principal — routage entre Auth et contenu protégé
-// Supporte le mode démo (sans Firebase) avec des données mock
 import { useState, useEffect } from 'react'
 import { useAuth } from './contexts/AuthContext'
 import { isFirebaseConfigured } from './services/firebase'
@@ -22,13 +21,11 @@ function App() {
     if (!user) return
 
     if (demoMode) {
-      // Mode démo — données statiques
       setTravelerStatus(DEMO_TRAVELER_STATUS)
       setPosts(DEMO_POSTS)
       return
     }
 
-    // Mode Firebase — écoute temps réel
     let unsubPosts, unsubStatus
     const init = async () => {
       const { subscribeToPosts } = await import('./services/postService')
@@ -44,12 +41,12 @@ function App() {
     }
   }, [user, demoMode])
 
-  // Tracking GPS automatique pour l'admin (mode Firebase uniquement)
+  // Tracking GPS automatique pour l'admin
   useEffect(() => {
     if (!isAdmin || demoMode) return
     let watchId
     const init = async () => {
-      const { startGeoTracking, stopGeoTracking } = await import('./services/travelerService')
+      const { startGeoTracking } = await import('./services/travelerService')
       watchId = startGeoTracking()
     }
     init()
@@ -65,28 +62,31 @@ function App() {
     return (
       <div className="loading-screen">
         <div className="loading-content">
-          <span className="loading-icon">&#9992;</span>
+          <div className="loading-compass">
+            <svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10" />
+              <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" fill="currentColor" opacity="0.6" />
+            </svg>
+          </div>
           <h1 className="loading-title">Wanderlog</h1>
+          <p className="loading-subtitle">Pr&eacute;paration du voyage...</p>
           <div className="loading-spinner" />
         </div>
       </div>
     )
   }
 
-  // Si non connecté (mode Firebase uniquement), afficher l'écran d'auth
   if (!user) {
     return <AuthScreen />
   }
 
-  // Contenu principal
   return (
     <div className="app">
       <Header activeTab={activeTab} setActiveTab={setActiveTab} />
 
-      {/* Bannière mode démo */}
       {demoMode && (
         <div className="demo-banner">
-          Mode démo — Configurez Firebase dans <code>.env</code> pour activer toutes les fonctionnalités
+          Mode d&eacute;mo &mdash; Configurez Firebase dans <code>.env</code> pour activer toutes les fonctionnalit&eacute;s
         </div>
       )}
 
@@ -96,10 +96,10 @@ function App() {
         )}
 
         {activeTab === 'feed' && (
-          <>
+          <div className="feed-wrapper">
             {!demoMode && <CreatePost />}
             <Feed demoMode={demoMode} demoPosts={posts} />
-          </>
+          </div>
         )}
 
         {activeTab === 'stats' && (
@@ -108,7 +108,18 @@ function App() {
       </main>
 
       <footer className="app-footer">
-        <p>Wanderlog &mdash; Carnet de voyage de Kilian</p>
+        <div className="footer-content">
+          <div className="footer-line" />
+          <span className="footer-compass">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <circle cx="12" cy="12" r="10" />
+              <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" fill="currentColor" opacity="0.5" />
+            </svg>
+          </span>
+          <div className="footer-line" />
+        </div>
+        <p className="footer-text">Wanderlog &mdash; Carnet de voyage de Kilian</p>
+        <p className="footer-coords">Quelque part sur Terre</p>
       </footer>
     </div>
   )
