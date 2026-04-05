@@ -1,10 +1,11 @@
-// Formulaire de création de post — réservé à l'admin (Kilian)
+// Formulaire de création de post — réservé au propriétaire du projet
 import { useState, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { createPost } from '../services/postService'
+import { useProject } from '../contexts/ProjectContext'
 
 const CreatePost = () => {
-  const { isAdmin } = useAuth()
+  const { user } = useAuth()
+  const { project, isOwner } = useProject()
   const [text, setText] = useState('')
   const [location, setLocation] = useState('')
   const [country, setCountry] = useState('')
@@ -15,8 +16,8 @@ const CreatePost = () => {
   const [isOpen, setIsOpen] = useState(false)
   const fileInputRef = useRef(null)
 
-  // Seul l'admin peut créer des posts
-  if (!isAdmin) return null
+  // Seul le propriétaire peut créer des posts
+  if (!isOwner) return null
 
   const handleFileChange = (e) => {
     const selectedFiles = Array.from(e.target.files)
@@ -27,7 +28,6 @@ const CreatePost = () => {
     setFiles((prev) => prev.filter((_, i) => i !== index))
   }
 
-  // Récupérer la position GPS actuelle
   const getCurrentPosition = () => {
     if (!navigator.geolocation) return
     navigator.geolocation.getCurrentPosition(
@@ -45,18 +45,18 @@ const CreatePost = () => {
 
     setIsSubmitting(true)
     try {
-      const postData = {
+      const { createProjectPost } = await import('../services/projectService')
+      await createProjectPost(project.id, {
         text: text.trim(),
         location: location.trim(),
         country: country.trim(),
         coordinates: lat && lng
           ? { latitude: parseFloat(lat), longitude: parseFloat(lng) }
           : null,
-      }
+        authorId: user.uid,
+        authorName: user.displayName || 'Voyageur',
+      }, files)
 
-      await createPost(postData, files)
-
-      // Réinitialiser le formulaire
       setText('')
       setLocation('')
       setCountry('')
@@ -91,79 +91,27 @@ const CreatePost = () => {
           />
 
           <div className="create-post-fields">
-            <input
-              type="text"
-              placeholder="Lieu (ex: Tokyo)"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              className="form-input"
-            />
-            <input
-              type="text"
-              placeholder="Pays (ex: Japon)"
-              value={country}
-              onChange={(e) => setCountry(e.target.value)}
-              className="form-input"
-            />
+            <input type="text" placeholder="Lieu" value={location} onChange={(e) => setLocation(e.target.value)} className="form-input" />
+            <input type="text" placeholder="Pays" value={country} onChange={(e) => setCountry(e.target.value)} className="form-input" />
           </div>
 
-          {/* Coordonnées GPS */}
           <div className="create-post-fields">
-            <input
-              type="number"
-              step="any"
-              placeholder="Latitude"
-              value={lat}
-              onChange={(e) => setLat(e.target.value)}
-              className="form-input"
-            />
-            <input
-              type="number"
-              step="any"
-              placeholder="Longitude"
-              value={lng}
-              onChange={(e) => setLng(e.target.value)}
-              className="form-input"
-            />
-            <button
-              type="button"
-              className="gps-btn"
-              onClick={getCurrentPosition}
-              title="Utiliser ma position"
-            >
-              &#128205;
-            </button>
+            <input type="number" step="any" placeholder="Latitude" value={lat} onChange={(e) => setLat(e.target.value)} className="form-input" />
+            <input type="number" step="any" placeholder="Longitude" value={lng} onChange={(e) => setLng(e.target.value)} className="form-input" />
+            <button type="button" className="gps-btn" onClick={getCurrentPosition} title="Ma position">&#128205;</button>
           </div>
 
-          {/* Upload de médias */}
           <div className="media-upload">
-            <button
-              type="button"
-              className="upload-btn"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              &#128247; Ajouter des photos/vidéos
+            <button type="button" className="upload-btn" onClick={() => fileInputRef.current?.click()}>
+              &#128247; Photos/vid&eacute;os
             </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*,video/*"
-              multiple
-              onChange={handleFileChange}
-              style={{ display: 'none' }}
-            />
+            <input ref={fileInputRef} type="file" accept="image/*,video/*" multiple onChange={handleFileChange} style={{ display: 'none' }} />
             {files.length > 0 && (
               <div className="upload-preview">
                 {files.map((f, i) => (
                   <div key={i} className="preview-item">
                     <span className="preview-name">{f.name}</span>
-                    <button
-                      type="button"
-                      className="preview-remove"
-                      onClick={() => removeFile(i)}
-                    >
-                      &#10005;
-                    </button>
+                    <button type="button" className="preview-remove" onClick={() => removeFile(i)}>&#10005;</button>
                   </div>
                 ))}
               </div>
@@ -171,18 +119,8 @@ const CreatePost = () => {
           </div>
 
           <div className="create-post-actions">
-            <button
-              type="button"
-              className="cancel-btn"
-              onClick={() => setIsOpen(false)}
-            >
-              Annuler
-            </button>
-            <button
-              type="submit"
-              className="submit-btn"
-              disabled={isSubmitting || !text.trim()}
-            >
+            <button type="button" className="cancel-btn" onClick={() => setIsOpen(false)}>Annuler</button>
+            <button type="submit" className="submit-btn" disabled={isSubmitting || !text.trim()}>
               {isSubmitting ? 'Publication...' : 'Publier'}
             </button>
           </div>

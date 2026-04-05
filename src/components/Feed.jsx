@@ -1,11 +1,10 @@
-// Feed / Journal — affiche les posts du voyage avec likes et commentaires
-// Supporte le mode démo avec données mock
+// Feed / Journal — affiche les posts du projet avec likes et commentaires
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { isFirebaseConfigured } from '../services/firebase'
+import { useProject } from '../contexts/ProjectContext'
 import { DEMO_COMMENTS } from '../services/demoData'
 
-// Composant pour un commentaire individuel
+// Composant commentaire
 const Comment = ({ comment }) => {
   const date = comment.createdAt?.toDate?.()
   return (
@@ -13,17 +12,16 @@ const Comment = ({ comment }) => {
       <span className="comment-author">{comment.userName}</span>
       <span className="comment-text">{comment.text}</span>
       {date && (
-        <span className="comment-date">
-          {date.toLocaleDateString('fr-FR')}
-        </span>
+        <span className="comment-date">{date.toLocaleDateString('fr-FR')}</span>
       )}
     </div>
   )
 }
 
-// Composant pour un post individuel
+// Composant post
 const PostCard = ({ post, demoMode }) => {
   const { user } = useAuth()
+  const { project } = useProject()
   const [showComments, setShowComments] = useState(false)
   const [comments, setComments] = useState([])
   const [localLikes, setLocalLikes] = useState(post.likesCount || 0)
@@ -32,39 +30,37 @@ const PostCard = ({ post, demoMode }) => {
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const postDate = post.createdAt?.toDate?.()
+  const authorInitial = (post.authorName || 'K')[0].toUpperCase()
 
-  // Charger les commentaires quand la section est ouverte
+  // Charger les commentaires
   useEffect(() => {
     if (!showComments) return
 
     if (demoMode) {
-      // Mode démo — commentaires statiques
       setComments(DEMO_COMMENTS[post.id] || [])
       return
     }
 
-    // Mode Firebase — écoute temps réel
     let unsubscribe = () => {}
     const init = async () => {
-      const { subscribeToComments } = await import('../services/postService')
-      unsubscribe = subscribeToComments(post.id, setComments)
+      const { subscribeToProjectComments } = await import('../services/projectService')
+      unsubscribe = subscribeToProjectComments(project.id, post.id, setComments)
     }
     init()
     return () => unsubscribe()
-  }, [showComments, post.id, demoMode])
+  }, [showComments, post.id, demoMode, project?.id])
 
   const handleLike = async () => {
     if (!user) return
 
     if (demoMode) {
-      // Mode démo — like local
       setHasLiked(!hasLiked)
       setLocalLikes((prev) => prev + (hasLiked ? -1 : 1))
       return
     }
 
-    const { toggleLike } = await import('../services/postService')
-    await toggleLike(post.id, user.uid)
+    const { toggleProjectLike } = await import('../services/projectService')
+    await toggleProjectLike(project.id, post.id, user.uid)
   }
 
   const handleComment = async (e) => {
@@ -73,123 +69,92 @@ const PostCard = ({ post, demoMode }) => {
     setIsSubmitting(true)
 
     if (demoMode) {
-      // Mode démo — ajouter le commentaire localement
-      setComments((prev) => [
-        ...prev,
-        {
-          id: `demo-${Date.now()}`,
-          text: newComment.trim(),
-          userName: user.displayName || 'Voyageur',
-          userId: user.uid,
-          createdAt: { toDate: () => new Date() },
-        },
-      ])
+      setComments((prev) => [...prev, {
+        id: `demo-${Date.now()}`,
+        text: newComment.trim(),
+        userName: user.displayName || 'Voyageur',
+        userId: user.uid,
+        createdAt: { toDate: () => new Date() },
+      }])
       setNewComment('')
       setIsSubmitting(false)
       return
     }
 
     try {
-      const { addComment } = await import('../services/postService')
-      await addComment(post.id, {
+      const { addProjectComment } = await import('../services/projectService')
+      await addProjectComment(project.id, post.id, {
         text: newComment.trim(),
         userId: user.uid,
         userName: user.displayName || 'Anonyme',
       })
       setNewComment('')
     } catch (err) {
-      console.error('Erreur lors de l\'ajout du commentaire:', err)
-    } finally {
-      setIsSubmitting(false)
+      console.error('Erreur commentaire:', err)
     }
+    setIsSubmitting(false)
   }
 
   return (
     <div className="post-card">
-      {/* En-tête du post */}
       <div className="post-header">
         <div className="post-author-info">
-          <div className="post-avatar">K</div>
+          <div className="post-avatar">{authorInitial}</div>
           <div>
-            <p className="post-author">Kilian</p>
+            <p className="post-author">{post.authorName || 'Voyageur'}</p>
             {post.location && (
               <p className="post-location">
                 &#128205; {post.location}
-                {post.country && ` — ${post.country}`}
+                {post.country && ` \u2014 ${post.country}`}
               </p>
             )}
           </div>
         </div>
         {postDate && (
           <span className="post-date">
-            {postDate.toLocaleDateString('fr-FR', {
-              day: 'numeric',
-              month: 'long',
-              year: 'numeric',
-            })}
+            {postDate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
           </span>
         )}
       </div>
 
-      {/* Contenu texte */}
       <p className="post-text">{post.text}</p>
 
-      {/* Médias (photos/vidéos) */}
       {post.media && post.media.length > 0 && (
         <div className={`post-media ${post.media.length > 1 ? 'grid' : ''}`}>
           {post.media.map((m, i) => (
-            m.type === 'video' ? (
-              <video key={i} src={m.url} controls className="media-item" />
-            ) : (
-              <img key={i} src={m.url} alt="" className="media-item" loading="lazy" />
-            )
+            m.type === 'video'
+              ? <video key={i} src={m.url} controls className="media-item" />
+              : <img key={i} src={m.url} alt="" className="media-item" loading="lazy" />
           ))}
         </div>
       )}
 
-      {/* Actions (like + commentaires) */}
       <div className="post-actions">
-        <button
-          className={`action-btn like-btn ${hasLiked ? 'liked' : ''}`}
-          onClick={handleLike}
-        >
-          <span>{hasLiked ? '&#10084;' : '&#9825;'}</span>
+        <button className={`action-btn like-btn ${hasLiked ? 'liked' : ''}`} onClick={handleLike}>
+          <span>{hasLiked ? '\u2764' : '\u2661'}</span>
           <span>{demoMode ? localLikes : (post.likesCount || 0)}</span>
         </button>
-        <button
-          className="action-btn comment-btn"
-          onClick={() => setShowComments(!showComments)}
-        >
+        <button className="action-btn comment-btn" onClick={() => setShowComments(!showComments)}>
           <span>&#128172;</span>
           <span>{post.commentsCount || 0}</span>
         </button>
       </div>
 
-      {/* Section commentaires dépliable */}
       {showComments && (
         <div className="comments-section">
-          {comments.length === 0 && (
-            <p className="no-comments">Aucun commentaire pour l'instant</p>
-          )}
-          {comments.map((c) => (
-            <Comment key={c.id} comment={c} />
-          ))}
+          {comments.length === 0 && <p className="no-comments">Aucun commentaire</p>}
+          {comments.map((c) => <Comment key={c.id} comment={c} />)}
 
-          {/* Formulaire de commentaire */}
           {user && (
             <form className="comment-form" onSubmit={handleComment}>
               <input
                 type="text"
-                placeholder="Écrire un commentaire..."
+                placeholder="\u00C9crire un commentaire..."
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
                 className="comment-input"
               />
-              <button
-                type="submit"
-                className="comment-submit"
-                disabled={isSubmitting || !newComment.trim()}
-              >
+              <button type="submit" className="comment-submit" disabled={isSubmitting || !newComment.trim()}>
                 &#10148;
               </button>
             </form>
@@ -200,8 +165,9 @@ const PostCard = ({ post, demoMode }) => {
   )
 }
 
-// Composant Feed principal
+// Feed principal
 const Feed = ({ demoMode = false, demoPosts = [] }) => {
+  const { project } = useProject()
   const [posts, setPosts] = useState([])
   const [loading, setLoading] = useState(!demoMode)
 
@@ -212,18 +178,19 @@ const Feed = ({ demoMode = false, demoPosts = [] }) => {
       return
     }
 
-    // Mode Firebase
+    if (!project) return
+
     let unsubscribe = () => {}
     const init = async () => {
-      const { subscribeToPosts } = await import('../services/postService')
-      unsubscribe = subscribeToPosts((fetchedPosts) => {
+      const { subscribeToProjectPosts } = await import('../services/projectService')
+      unsubscribe = subscribeToProjectPosts(project.id, (fetchedPosts) => {
         setPosts(fetchedPosts)
         setLoading(false)
       })
     }
     init()
     return () => unsubscribe()
-  }, [demoMode])
+  }, [demoMode, project?.id])
 
   if (loading) {
     return (
@@ -231,7 +198,7 @@ const Feed = ({ demoMode = false, demoPosts = [] }) => {
         <h2 className="section-title">Journal de voyage</h2>
         <div className="feed-loading">
           <div className="loading-spinner" />
-          <p>Chargement des posts...</p>
+          <p>Chargement...</p>
         </div>
       </div>
     )
@@ -242,7 +209,7 @@ const Feed = ({ demoMode = false, demoPosts = [] }) => {
       <h2 className="section-title">Journal de voyage</h2>
       {posts.length === 0 ? (
         <div className="feed-empty">
-          <p>Aucun post pour le moment. L'aventure commence bientôt !</p>
+          <p>Aucun post pour le moment. L'aventure commence bient&ocirc;t !</p>
         </div>
       ) : (
         <div className="posts-list">
@@ -255,5 +222,4 @@ const Feed = ({ demoMode = false, demoPosts = [] }) => {
   )
 }
 
-export { Feed, PostCard }
 export default Feed

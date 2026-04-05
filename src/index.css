@@ -1781,3 +1781,354 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-muted);
 }
+
+/* ============================================
+   ÉCRAN DE SÉLECTION DE PROJET
+   ============================================ */
+.project-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100dvh;
+  padding: 24px;
+  background:
+    radial-gradient(ellipse at center, rgba(212, 160, 68, 0.04) 0%, transparent 60%),
+    var(--bg-primary);
+}
+
+.project-container {
+  width: 100%;
+  max-width: 480px;
+}
+
+.project-header {
+  text-align: center;
+  margin-bottom: 36px;
+}
+
+.project-logo {
+  color: var(--accent);
+  margin-bottom: 12px;
+  display: flex;
+  justify-content: center;
+}
+
+.project-title {
+  font-family: var(--font-heading);
+  font-size: 32px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.5px;
+}
+
+.project-subtitle {
+  color: var(--text-secondary);
+  font-size: 14px;
+  margin-top: 6px;
+}
+
+/* Projets existants */
+.existing-projects {
+  margin-bottom: 24px;
+}
+
+.existing-title {
+  font-family: var(--font-heading);
+  font-size: 16px;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
+.existing-project-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-warm);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  cursor: pointer;
+  margin-bottom: 8px;
+  transition: all 0.2s;
+}
+
+.existing-project-btn:hover {
+  background: rgba(212, 160, 68, 0.06);
+  border-color: var(--accent);
+}
+
+.ep-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.ep-name {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.ep-code {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-family: monospace;
+}
+
+.ep-arrow {
+  color: var(--accent);
+  font-size: 18px;
+}
+
+.existing-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.existing-divider::before,
+.existing-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border-warm);
+}
+
+/* Choix créer / rejoindre */
+.project-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.choice-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 20px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-warm);
+  border-radius: var(--radius-lg);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.25s;
+  text-align: left;
+}
+
+.choice-btn:hover {
+  border-color: var(--accent);
+  background: rgba(212, 160, 68, 0.05);
+  box-shadow: var(--shadow-glow);
+}
+
+.choice-icon {
+  font-size: 24px;
+  margin-bottom: 8px;
+}
+
+.choice-label {
+  font-family: var(--font-heading);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.choice-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+/* Formulaire projet */
+.project-form {
+  background: var(--bg-card);
+  border: 1px solid var(--border-warm);
+  border-radius: var(--radius-lg);
+  padding: 28px;
+}
+
+.form-title {
+  font-family: var(--font-heading);
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 20px;
+}
+
+.form-desc {
+  color: var(--text-secondary);
+  font-size: 14px;
+  margin-top: -14px;
+  margin-bottom: 20px;
+}
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-label {
+  display: block;
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+
+.form-textarea {
+  resize: vertical;
+  min-height: 70px;
+}
+
+.form-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.code-input {
+  text-align: center;
+  font-size: 24px !important;
+  letter-spacing: 6px;
+  font-family: monospace;
+  text-transform: uppercase;
+}
+
+/* Code créé — succès */
+.code-success {
+  text-align: center;
+  background: var(--bg-card);
+  border: 1px solid var(--border-warm);
+  border-radius: var(--radius-lg);
+  padding: 36px 28px;
+}
+
+.code-check {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(92, 184, 122, 0.12);
+  color: var(--success);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  margin: 0 auto 16px;
+}
+
+.code-title {
+  font-family: var(--font-heading);
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.code-desc {
+  color: var(--text-secondary);
+  font-size: 14px;
+  margin: 8px 0 20px;
+}
+
+.code-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.code-value {
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: 6px;
+  color: var(--accent);
+  font-family: monospace;
+  background: rgba(212, 160, 68, 0.08);
+  padding: 12px 24px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-warm);
+}
+
+.code-copy {
+  padding: 10px 16px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-warm);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s;
+}
+
+.code-copy:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.code-continue {
+  width: 100%;
+  margin-top: 8px;
+}
+
+/* ============================================
+   COMPOSANT ADD TRIP
+   ============================================ */
+.add-trip {
+  margin-top: 16px;
+}
+
+.add-trip-toggle {
+  width: 100%;
+  padding: 12px;
+  background: var(--bg-card);
+  border: 1px dashed var(--border-warm);
+  border-radius: var(--radius-md);
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.add-trip-toggle:hover {
+  background: rgba(212, 160, 68, 0.06);
+  border-color: var(--accent);
+}
+
+.add-trip-form {
+  background: var(--bg-card);
+  border: 1px solid var(--border-warm);
+  border-radius: var(--radius-md);
+  padding: 20px;
+}
+
+/* ============================================
+   HEADER — badge code projet
+   ============================================ */
+.project-code-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 7px;
+  background: rgba(212, 160, 68, 0.1);
+  border: 1px solid var(--border-warm);
+  border-radius: 4px;
+  font-size: 10px;
+  font-family: monospace;
+  color: var(--accent);
+  letter-spacing: 1px;
+  vertical-align: middle;
+}
+
+.user-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.user-actions .logout-btn {
+  font-size: 11px;
+  white-space: nowrap;
+}

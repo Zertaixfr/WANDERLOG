@@ -1,24 +1,29 @@
 // Composant principal — layout split : globe + profil voyageur sur desktop
 import { useState, useEffect } from 'react'
 import { useAuth } from './contexts/AuthContext'
-import { isFirebaseConfigured } from './services/firebase'
+import { useProject } from './contexts/ProjectContext'
 import AuthScreen from './components/AuthScreen'
+import ProjectScreen from './components/ProjectScreen'
 import Header from './components/Header'
 import Globe3D from './components/Globe3D'
 import Feed from './components/Feed'
 import Stats from './components/Stats'
 import CreatePost from './components/CreatePost'
+import AddTrip from './components/AddTrip'
 import TravelerProfile from './components/TravelerProfile'
 import { DEMO_POSTS, DEMO_TRAVELER_STATUS } from './services/demoData'
 
 function App() {
-  const { user, isAdmin, loading, demoMode } = useAuth()
+  const { user, isAdmin, loading: authLoading, demoMode } = useAuth()
+  const { project, isOwner, loading: projectLoading } = useProject()
   const [activeTab, setActiveTab] = useState('globe')
   const [travelerStatus, setTravelerStatus] = useState(null)
   const [posts, setPosts] = useState([])
+  const [trips, setTrips] = useState([])
 
+  // Charger les données du projet
   useEffect(() => {
-    if (!user) return
+    if (!user || !project) return
 
     if (demoMode) {
       setTravelerStatus(DEMO_TRAVELER_STATUS)
@@ -26,37 +31,59 @@ function App() {
       return
     }
 
-    let unsubPosts, unsubStatus
+    let unsubPosts, unsubStatus, unsubTrips
     const init = async () => {
-      const { subscribeToPosts } = await import('./services/postService')
-      const { subscribeToTravelerStatus } = await import('./services/travelerService')
-      unsubPosts = subscribeToPosts(setPosts)
-      unsubStatus = subscribeToTravelerStatus(setTravelerStatus)
+      const {
+        subscribeToProjectPosts,
+        subscribeToProjectTravelerStatus,
+        subscribeToTrips,
+      } = await import('./services/projectService')
+
+      unsubPosts = subscribeToProjectPosts(project.id, (fetchedPosts) => {
+        setPosts(fetchedPosts)
+      })
+      unsubStatus = subscribeToProjectTravelerStatus(project.id, setTravelerStatus)
+      unsubTrips = subscribeToTrips(project.id, setTrips)
     }
     init()
 
     return () => {
       unsubPosts?.()
       unsubStatus?.()
+      unsubTrips?.()
     }
-  }, [user, demoMode])
+  }, [user, project?.id, demoMode])
 
+  // Géolocalisation pour le propriétaire
   useEffect(() => {
-    if (!isAdmin || demoMode) return
+    if (!isOwner || demoMode || !project) return
     let watchId
     const init = async () => {
-      const { startGeoTracking } = await import('./services/travelerService')
-      watchId = startGeoTracking()
+      const { updateProjectTravelerStatus } = await import('./services/projectService')
+      if (!navigator.geolocation) return
+      watchId = navigator.geolocation.watchPosition(
+        async (pos) => {
+          try {
+            await updateProjectTravelerStatus(project.id, {
+              latitude: pos.coords.latitude,
+              longitude: pos.coords.longitude,
+            })
+          } catch (err) {
+            console.error('Erreur géoloc:', err)
+          }
+        },
+        (err) => console.error('Erreur GPS:', err),
+        { enableHighAccuracy: true, maximumAge: 60000 }
+      )
     }
     init()
     return () => {
-      if (watchId !== undefined) {
-        import('./services/travelerService').then(({ stopGeoTracking }) => stopGeoTracking(watchId))
-      }
+      if (watchId !== undefined) navigator.geolocation.clearWatch(watchId)
     }
-  }, [isAdmin, demoMode])
+  }, [isOwner, demoMode, project?.id])
 
-  if (loading) {
+  // Écran de chargement
+  if (authLoading || projectLoading) {
     return (
       <div className="loading-screen">
         <div className="loading-content">
@@ -74,10 +101,17 @@ function App() {
     )
   }
 
+  // Pas connecté → écran d'authentification
   if (!user) {
     return <AuthScreen />
   }
 
+  // Pas de projet sélectionné → écran de sélection/création
+  if (!project) {
+    return <ProjectScreen />
+  }
+
+  // App principale avec projet actif
   return (
     <div className="app">
       <Header activeTab={activeTab} setActiveTab={setActiveTab} />
@@ -93,10 +127,11 @@ function App() {
         {activeTab === 'globe' && (
           <div className="globe-layout">
             <div className="globe-panel">
-              <Globe3D travelerStatus={travelerStatus} posts={posts} />
+              <Globe3D travelerStatus={travelerStatus} posts={posts} trips={trips} />
             </div>
             <aside className="sidebar-panel">
               <TravelerProfile travelerStatus={travelerStatus} posts={posts} />
+              {isOwner && <AddTrip onTripAdded={() => {}} />}
             </aside>
           </div>
         )}
@@ -104,7 +139,7 @@ function App() {
         {/* Vue Journal */}
         {activeTab === 'feed' && (
           <div className="feed-wrapper">
-            {!demoMode && <CreatePost />}
+            {isOwner && <CreatePost />}
             <Feed demoMode={demoMode} demoPosts={posts} />
           </div>
         )}
@@ -126,8 +161,8 @@ function App() {
           </span>
           <div className="footer-line" />
         </div>
-        <p className="footer-text">Wanderlog &mdash; Carnet de voyage de Kilian</p>
-        <p className="footer-coords">Quelque part sur Terre</p>
+        <p className="footer-text">Wanderlog &mdash; {project.name}</p>
+        <p className="footer-coords">Code : {project.code}</p>
       </footer>
     </div>
   )

@@ -1,16 +1,18 @@
 // En-tête de l'application — ambiance carnet de voyage
 import { useAuth } from '../contexts/AuthContext'
+import { useProject } from '../contexts/ProjectContext'
 import { logoutUser } from '../services/authService'
 
 const Header = ({ activeTab, setActiveTab }) => {
   const { user, isAdmin, demoMode } = useAuth()
+  const { project, isOwner, leaveProject } = useProject()
 
   const handleLogout = async () => {
     if (demoMode) return
     try {
       await logoutUser()
     } catch (err) {
-      console.error('Erreur lors de la déconnexion:', err)
+      console.error('Erreur lors de la d\u00e9connexion:', err)
     }
   }
 
@@ -32,7 +34,12 @@ const Header = ({ activeTab, setActiveTab }) => {
           </div>
           <div>
             <h1 className="brand-name">Wanderlog</h1>
-            <span className="brand-tagline">Tour du monde</span>
+            <span className="brand-tagline">
+              {project?.name || 'Tour du monde'}
+              {project?.code && (
+                <span className="project-code-badge">{project.code}</span>
+              )}
+            </span>
           </div>
         </div>
         <div className="header-user">
@@ -42,11 +49,16 @@ const Header = ({ activeTab, setActiveTab }) => {
           <div className="user-info">
             <span className="user-name">
               {user?.displayName || 'Voyageur'}
-              {isAdmin && <span className="admin-badge">Explorateur</span>}
+              {isOwner && <span className="admin-badge">Cr\u00e9ateur</span>}
             </span>
-            <button className="logout-btn" onClick={handleLogout}>
-              Se d&eacute;connecter
-            </button>
+            <div className="user-actions">
+              <button className="logout-btn" onClick={leaveProject}>
+                Changer de carnet
+              </button>
+              <button className="logout-btn" onClick={handleLogout}>
+                D\u00e9connexion
+              </button>
+            </div>
           </div>
         </div>
       </div>
