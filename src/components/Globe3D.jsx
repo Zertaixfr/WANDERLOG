@@ -2,9 +2,8 @@
 import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 
-// Textures de la Terre (NASA / Natural Earth)
-const EARTH_TEXTURE = 'https://unpkg.com/three-globe@2.35.0/example/img/earth-blue-marble.jpg'
-const EARTH_BUMP = 'https://unpkg.com/three-globe@2.35.0/example/img/earth-topology.png'
+// Texture de la Terre (NASA Blue Marble via jsdelivr CDN)
+const EARTH_TEXTURE = 'https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-blue-marble.jpg'
 
 // Convertir lat/lng en coordonnées 3D sur une sphère
 const latLngToVector3 = (lat, lng, radius) => {
@@ -71,37 +70,28 @@ const Globe3D = ({ travelerStatus, posts = [] }) => {
 
     const globeRadius = 1.5
     const textureLoader = new THREE.TextureLoader()
+    textureLoader.crossOrigin = 'anonymous'
 
-    // Lumière ambiante douce
-    const ambientLight = new THREE.AmbientLight(0xffffff, 1.2)
-    scene.add(ambientLight)
-
-    // Lumière directionnelle (effet soleil)
-    const sunLight = new THREE.DirectionalLight(0xfff5e6, 0.8)
-    sunLight.position.set(5, 3, 5)
-    scene.add(sunLight)
-
-    // Globe terrestre avec texture
+    // Globe terrestre — couleur océan en attendant la texture
     const globeGeometry = new THREE.SphereGeometry(globeRadius, 64, 64)
-    const globeMaterial = new THREE.MeshPhongMaterial({
-      color: 0xffffff,
-      shininess: 15,
+    const globeMaterial = new THREE.MeshBasicMaterial({
+      color: 0x1a3a5c,
     })
     const globe = new THREE.Mesh(globeGeometry, globeMaterial)
     scene.add(globe)
 
-    // Charger la texture de la Terre
-    textureLoader.load(EARTH_TEXTURE, (texture) => {
-      globeMaterial.map = texture
-      globeMaterial.needsUpdate = true
-    })
-
-    // Charger le bump map (relief)
-    textureLoader.load(EARTH_BUMP, (texture) => {
-      globeMaterial.bumpMap = texture
-      globeMaterial.bumpScale = 0.03
-      globeMaterial.needsUpdate = true
-    })
+    // Charger la texture satellite de la Terre
+    textureLoader.load(
+      EARTH_TEXTURE,
+      (texture) => {
+        texture.colorSpace = THREE.SRGBColorSpace
+        globeMaterial.map = texture
+        globeMaterial.color.set(0xffffff)
+        globeMaterial.needsUpdate = true
+      },
+      undefined,
+      (err) => console.error('Erreur chargement texture Terre:', err)
+    )
 
     // Halo atmosphérique bleu
     const haloGeometry = new THREE.SphereGeometry(globeRadius + 0.12, 48, 48)
@@ -183,24 +173,12 @@ const Globe3D = ({ travelerStatus, posts = [] }) => {
       markersGroup.add(arc)
     }
 
-    // Pulse sur la position actuelle
+    // Pulse animé sur la position actuelle
     let pulseGlow = null
     if (currentPosition) {
       const pos = latLngToVector3(currentPosition.lat, currentPosition.lng, globeRadius + 0.02)
 
-      markersGroup.add(new THREE.Mesh(
-        new THREE.SphereGeometry(0.04, 16, 16),
-        new THREE.MeshBasicMaterial({ color: 0x2ecc71 })
-      ).translateX(pos.x).translateY(pos.y).translateZ(pos.z) ? (() => {
-        const m = new THREE.Mesh(
-          new THREE.SphereGeometry(0.04, 16, 16),
-          new THREE.MeshBasicMaterial({ color: 0x2ecc71 })
-        )
-        m.position.copy(pos)
-        return m
-      })() : null)
-
-      // Recréer proprement le pulse
+      // Point vert vif
       const pulseCore = new THREE.Mesh(
         new THREE.SphereGeometry(0.04, 16, 16),
         new THREE.MeshBasicMaterial({ color: 0x2ecc71 })
@@ -208,6 +186,7 @@ const Globe3D = ({ travelerStatus, posts = [] }) => {
       pulseCore.position.copy(pos)
       markersGroup.add(pulseCore)
 
+      // Halo pulsant
       pulseGlow = new THREE.Mesh(
         new THREE.SphereGeometry(0.08, 16, 16),
         new THREE.MeshBasicMaterial({
