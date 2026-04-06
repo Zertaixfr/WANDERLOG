@@ -366,11 +366,42 @@ const Globe3D = ({ travelerStatus, posts = [], trips = [] }) => {
     }
     const onUp = () => { isDragging = false }
 
+    // Zoom molette
+    const minZoom = 2.5
+    const maxZoom = 8
+    const onWheel = (e) => {
+      e.preventDefault()
+      camera.position.z = Math.max(minZoom, Math.min(maxZoom, camera.position.z + e.deltaY * 0.003))
+    }
+
+    // Zoom pinch (mobile)
+    let lastPinchDist = 0
+    const onTouchStartZoom = (e) => {
+      if (e.touches.length === 2) {
+        const dx = e.touches[0].clientX - e.touches[1].clientX
+        const dy = e.touches[0].clientY - e.touches[1].clientY
+        lastPinchDist = Math.sqrt(dx * dx + dy * dy)
+      }
+    }
+    const onTouchMoveZoom = (e) => {
+      if (e.touches.length === 2) {
+        const dx = e.touches[0].clientX - e.touches[1].clientX
+        const dy = e.touches[0].clientY - e.touches[1].clientY
+        const dist = Math.sqrt(dx * dx + dy * dy)
+        const delta = lastPinchDist - dist
+        camera.position.z = Math.max(minZoom, Math.min(maxZoom, camera.position.z + delta * 0.01))
+        lastPinchDist = dist
+      }
+    }
+
     renderer.domElement.addEventListener('mousedown', onDown)
     renderer.domElement.addEventListener('mousemove', onMove)
     renderer.domElement.addEventListener('mouseup', onUp)
+    renderer.domElement.addEventListener('wheel', onWheel, { passive: false })
     renderer.domElement.addEventListener('touchstart', onDown)
+    renderer.domElement.addEventListener('touchstart', onTouchStartZoom)
     renderer.domElement.addEventListener('touchmove', onMove)
+    renderer.domElement.addEventListener('touchmove', onTouchMoveZoom)
     renderer.domElement.addEventListener('touchend', onUp)
 
     // Raycaster
@@ -462,8 +493,11 @@ const Globe3D = ({ travelerStatus, posts = [], trips = [] }) => {
       renderer.domElement.removeEventListener('mousedown', onDown)
       renderer.domElement.removeEventListener('mousemove', onMove)
       renderer.domElement.removeEventListener('mouseup', onUp)
+      renderer.domElement.removeEventListener('wheel', onWheel)
       renderer.domElement.removeEventListener('touchstart', onDown)
+      renderer.domElement.removeEventListener('touchstart', onTouchStartZoom)
       renderer.domElement.removeEventListener('touchmove', onMove)
+      renderer.domElement.removeEventListener('touchmove', onTouchMoveZoom)
       renderer.domElement.removeEventListener('touchend', onUp)
       renderer.domElement.removeEventListener('click', onClick)
       renderer.dispose()
