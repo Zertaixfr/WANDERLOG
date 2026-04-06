@@ -573,22 +573,52 @@ body {
 }
 
 /* ============================================
-   GLOBE 3D
+   GLOBE 3D — style carnet de voyage
    ============================================ */
 .globe-section {
   padding-bottom: 24px;
+}
+
+.globe-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.globe-title {
+  font-family: var(--font-heading);
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: 0.3px;
+}
+
+.globe-count {
+  font-size: 13px;
+  color: var(--accent);
+  background: rgba(212, 160, 68, 0.08);
+  padding: 3px 10px;
+  border-radius: 20px;
+  border: 1px solid var(--border-warm);
+  font-weight: 500;
 }
 
 .globe-container {
   position: relative;
   width: 100%;
   height: 420px;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
   overflow: hidden;
-  background: radial-gradient(ellipse at center, #14171e 0%, #0c0e12 100%);
-  border: 1px solid var(--border-subtle);
+  background:
+    radial-gradient(ellipse at 30% 20%, rgba(212, 160, 68, 0.04) 0%, transparent 50%),
+    radial-gradient(ellipse at center, #111419 0%, #0a0c10 100%);
+  border: 1px solid var(--border-warm);
   cursor: grab;
-  box-shadow: var(--shadow-card);
+  box-shadow:
+    0 8px 40px rgba(0, 0, 0, 0.4),
+    0 0 60px rgba(212, 160, 68, 0.03),
+    inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
 @media (min-width: 769px) {
@@ -600,7 +630,6 @@ body {
     height: calc(100vh - 200px);
     min-height: 500px;
     max-height: 900px;
-    border-radius: var(--radius-xl);
   }
 }
 
@@ -612,30 +641,47 @@ body {
   display: block;
 }
 
+/* Tooltip au survol des marqueurs */
 .globe-tooltip {
   position: absolute;
   top: 20px;
   left: 50%;
   transform: translateX(-50%);
-  background: rgba(12, 14, 18, 0.92);
-  backdrop-filter: blur(12px);
+  background: rgba(12, 14, 18, 0.94);
+  backdrop-filter: blur(16px);
   border: 1px solid var(--border-warm);
   border-radius: var(--radius-md);
-  padding: 10px 20px;
+  padding: 12px 22px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  animation: tooltipIn 0.3s ease;
+  z-index: 10;
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.5),
+    0 0 20px rgba(212, 160, 68, 0.06);
+}
+
+@keyframes tooltipIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(-8px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.tooltip-pin {
+  font-size: 18px;
+}
+
+.tooltip-text {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 3px;
-  animation: fadeIn 0.3s ease;
-  z-index: 10;
-  box-shadow: var(--shadow-warm);
+  gap: 2px;
 }
 
 .tooltip-name {
   font-family: var(--font-heading);
   font-weight: 600;
   color: var(--accent);
-  font-size: 15px;
+  font-size: 16px;
 }
 
 .tooltip-country {
@@ -644,47 +690,93 @@ body {
   font-style: italic;
 }
 
-/* Légende des étapes — style voyage */
+/* Légende du parcours — style timeline voyage */
 .globe-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 16px;
   margin-top: 16px;
-  padding: 16px 20px;
+  padding: 20px 22px;
   background: linear-gradient(160deg, var(--bg-warm), var(--bg-card));
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
+  border: 1px solid var(--border-warm);
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-warm);
 }
 
-.legend-item {
+.legend-route {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  align-items: flex-start;
+}
+
+.legend-stop {
   display: flex;
   align-items: center;
   gap: 8px;
+  position: relative;
 }
 
-.legend-dot {
-  width: 8px;
-  height: 8px;
+.legend-number {
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
-  background: var(--accent);
-  box-shadow: 0 0 6px rgba(212, 160, 68, 0.3);
+  background: rgba(212, 160, 68, 0.15);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
-.legend-dot.current {
+.legend-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.legend-city {
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.legend-country {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-style: italic;
+}
+
+.legend-connector {
+  width: 20px;
+  height: 1px;
+  background: linear-gradient(90deg, var(--accent), transparent);
+  margin: 0 6px;
+  opacity: 0.4;
+  align-self: center;
+}
+
+.legend-current {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.legend-live-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
   background: var(--success);
   box-shadow: 0 0 8px rgba(92, 184, 122, 0.5);
   animation: pulse-dot 2s ease-in-out infinite;
 }
 
-.legend-name {
-  color: var(--text-secondary);
-  font-size: 12px;
-  font-family: var(--font-body);
-}
-
-.legend-item.current .legend-name {
+.legend-live-text {
   color: var(--success);
+  font-size: 12px;
   font-weight: 500;
 }
 
