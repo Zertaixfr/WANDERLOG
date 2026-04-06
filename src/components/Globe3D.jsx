@@ -2,74 +2,8 @@
 import { useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 
-// Textures
+// Texture Terre haute qualité
 const EARTH_TEXTURE = 'https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-blue-marble.jpg'
-const EARTH_BUMP = 'https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-topology.png'
-
-// Shader vintage — transforme la texture satellite en carte ancienne
-const vintageVertexShader = `
-  varying vec2 vUv;
-  varying vec3 vNormal;
-  varying vec3 vPosition;
-  void main() {
-    vUv = uv;
-    vNormal = normalize(normalMatrix * normal);
-    vPosition = (modelViewMatrix * vec4(position, 1.0)).xyz;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-  }
-`
-
-const vintageFragmentShader = `
-  uniform sampler2D earthMap;
-  uniform sampler2D bumpMap;
-  uniform float time;
-  varying vec2 vUv;
-  varying vec3 vNormal;
-  varying vec3 vPosition;
-
-  void main() {
-    vec4 texColor = texture2D(earthMap, vUv);
-
-    // Luminosité du pixel
-    float lum = dot(texColor.rgb, vec3(0.299, 0.587, 0.114));
-
-    // Palette carte ancienne : parchemin pour terre, bleu doux pour océans
-    vec3 parchment = vec3(0.92, 0.85, 0.72);   // beige parchemin
-    vec3 land = vec3(0.78, 0.70, 0.52);          // terre/sable
-    vec3 landDark = vec3(0.60, 0.52, 0.38);      // forêts/montagnes
-    vec3 ocean = vec3(0.55, 0.70, 0.78);          // bleu doux vintage
-    vec3 oceanDeep = vec3(0.45, 0.58, 0.68);      // bleu profond
-
-    // Détecter eau vs terre par la couleur (bleu = eau)
-    float isWater = smoothstep(0.1, 0.3, texColor.b - max(texColor.r, texColor.g) * 0.7);
-
-    // Couleur terre : du clair (plaines) au foncé (montagnes)
-    vec3 landColor = mix(land, landDark, smoothstep(0.15, 0.55, lum));
-    landColor = mix(landColor, parchment, smoothstep(0.5, 0.75, lum) * 0.3);
-
-    // Couleur eau
-    vec3 waterColor = mix(oceanDeep, ocean, smoothstep(0.05, 0.3, lum));
-
-    // Mélange final
-    vec3 color = mix(landColor, waterColor, isWater);
-
-    // Éclairage doux
-    vec3 lightDir = normalize(vec3(0.5, 0.7, 1.0));
-    float diffuse = max(dot(vNormal, lightDir), 0.0);
-    float ambient = 0.65;
-    color *= (ambient + diffuse * 0.45);
-
-    // Léger vignettage aux pôles
-    float lat = abs(vUv.y - 0.5) * 2.0;
-    color = mix(color, color * 0.85, smoothstep(0.7, 1.0, lat));
-
-    // Grain subtil de papier
-    float grain = fract(sin(dot(vUv * 200.0, vec2(12.9898, 78.233))) * 43758.5453);
-    color += (grain - 0.5) * 0.03;
-
-    gl_FragColor = vec4(color, 1.0);
-  }
-`
 
 // Convertir lat/lng en coordonnées 3D sur une sphère
 const latLngToVector3 = (lat, lng, radius) => {
@@ -251,77 +185,31 @@ const Globe3D = ({ travelerStatus, posts = [], trips = [] }) => {
     backLight.position.set(0, -3, -5)
     scene.add(backLight)
 
-    // Globe terrestre — shader carte ancienne vintage
+    // Globe terrestre — texture réaliste, bien éclairé
     const globeGeometry = new THREE.SphereGeometry(globeRadius, 96, 96)
-    const uniforms = {
-      earthMap: { value: null },
-      bumpMap: { value: null },
-      time: { value: 0 },
-    }
-    const globeMaterial = new THREE.ShaderMaterial({
-      vertexShader: vintageVertexShader,
-      fragmentShader: vintageFragmentShader,
-      uniforms,
-    })
-    // Couleur de base en attendant la texture (parchemin)
-    const fallbackMat = new THREE.MeshBasicMaterial({ color: 0xd9ccb0 })
-    const globe = new THREE.Mesh(globeGeometry, fallbackMat)
+    const globeMaterial = new THREE.MeshBasicMaterial({ color: 0x2a5a8a })
+    const globe = new THREE.Mesh(globeGeometry, globeMaterial)
     scene.add(globe)
 
-    // Charger la texture et basculer sur le shader vintage
+    // Charger la texture satellite
     textureLoader.load(EARTH_TEXTURE, (texture) => {
       texture.colorSpace = THREE.SRGBColorSpace
-      uniforms.earthMap.value = texture
-      globe.material = globeMaterial
-      globe.material.needsUpdate = true
+      globeMaterial.map = texture
+      globeMaterial.color.set(0xffffff)
+      globeMaterial.needsUpdate = true
     })
 
-    textureLoader.load(EARTH_BUMP, (bumpTex) => {
-      uniforms.bumpMap.value = bumpTex
-    })
-
-    // Halo doré chaud — lueur de lampe
+    // Halo atmosphérique bleu clair
     scene.add(new THREE.Mesh(
-      new THREE.SphereGeometry(globeRadius + 0.06, 64, 64),
-      new THREE.MeshBasicMaterial({ color: 0xd4a044, transparent: true, opacity: 0.08, side: THREE.BackSide })
+      new THREE.SphereGeometry(globeRadius + 0.07, 64, 64),
+      new THREE.MeshBasicMaterial({ color: 0x88bbee, transparent: true, opacity: 0.08, side: THREE.BackSide })
     ))
     scene.add(new THREE.Mesh(
-      new THREE.SphereGeometry(globeRadius + 0.15, 64, 64),
-      new THREE.MeshBasicMaterial({ color: 0xc89640, transparent: true, opacity: 0.04, side: THREE.BackSide })
+      new THREE.SphereGeometry(globeRadius + 0.18, 64, 64),
+      new THREE.MeshBasicMaterial({ color: 0x6699cc, transparent: true, opacity: 0.04, side: THREE.BackSide })
     ))
 
-    // Anneau décoratif doré — style pied de globe de bureau
-    const ringGeometry = new THREE.TorusGeometry(globeRadius + 0.01, 0.008, 8, 128)
-    const ringMat = new THREE.MeshBasicMaterial({ color: 0xd4a044, transparent: true, opacity: 0.35 })
-    const equatorRing = new THREE.Mesh(ringGeometry, ringMat)
-    scene.add(equatorRing)
-
-    // Anneau méridien vertical
-    const meridianRing = new THREE.Mesh(
-      new THREE.TorusGeometry(globeRadius + 0.015, 0.006, 8, 128),
-      new THREE.MeshBasicMaterial({ color: 0xd4a044, transparent: true, opacity: 0.2 })
-    )
-    meridianRing.rotation.y = Math.PI / 2
-    scene.add(meridianRing)
-
-    // Grille de méridiens/parallèles dorée (carte ancienne)
     const gridGroup = new THREE.Group()
-    const gridMat = new THREE.LineBasicMaterial({ color: 0xc8a050, transparent: true, opacity: 0.07 })
-    for (let lng = -180; lng < 180; lng += 30) {
-      const pts = []
-      for (let lat = -90; lat <= 90; lat += 3) {
-        pts.push(latLngToVector3(lat, lng, globeRadius + 0.004))
-      }
-      gridGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), gridMat))
-    }
-    for (let lat = -60; lat <= 60; lat += 30) {
-      const pts = []
-      for (let lng = -180; lng <= 180; lng += 3) {
-        pts.push(latLngToVector3(lat, lng, globeRadius + 0.004))
-      }
-      gridGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), gridMat))
-    }
-    scene.add(gridGroup)
 
     // Groupe pour les marqueurs
     const markersGroup = new THREE.Group()
@@ -452,9 +340,6 @@ const Globe3D = ({ travelerStatus, posts = [], trips = [] }) => {
     const syncRotation = () => {
       markersGroup.rotation.copy(globe.rotation)
       gridGroup.rotation.copy(globe.rotation)
-      equatorRing.rotation.copy(globe.rotation)
-      meridianRing.rotation.y = globe.rotation.y + Math.PI / 2
-      meridianRing.rotation.x = globe.rotation.x
     }
 
     const onMove = (e) => {
