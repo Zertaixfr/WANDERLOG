@@ -1,6 +1,7 @@
 // Formulaire d'ajout d'étape/trajet — réservé au propriétaire du projet
 import { useState, useRef } from 'react'
 import { useProject } from '../contexts/ProjectContext'
+import { useAuth } from '../contexts/AuthContext'
 
 // Compresser une image avant upload (max 800px, qualité 0.7)
 const compressImage = (file, maxSize = 800, quality = 0.7) => {
@@ -29,6 +30,7 @@ const compressImage = (file, maxSize = 800, quality = 0.7) => {
 
 const AddTrip = ({ onTripAdded }) => {
   const { project, isOwner } = useProject()
+  const { user } = useAuth()
   const [isOpen, setIsOpen] = useState(false)
   const [city, setCity] = useState('')
   const [country, setCountry] = useState('')
@@ -96,7 +98,7 @@ const AddTrip = ({ onTripAdded }) => {
         longitude: parseFloat(lng),
         arrivalDate: arrivalDate || null,
         notes: notes.trim(),
-      }, compressedPhoto)
+      }, compressedPhoto, user?.uid)
 
       // Reset
       setCity('')

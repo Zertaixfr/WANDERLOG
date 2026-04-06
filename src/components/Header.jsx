@@ -2,6 +2,8 @@
 import { useAuth } from '../contexts/AuthContext'
 import { useProject } from '../contexts/ProjectContext'
 import { logoutUser } from '../services/authService'
+import { NotificationBell } from './Notifications'
+import NotificationPanel from './Notifications'
 
 const Header = ({ activeTab, setActiveTab }) => {
   const { user, userData, isAdmin, demoMode } = useAuth()
@@ -43,6 +45,10 @@ const Header = ({ activeTab, setActiveTab }) => {
           </div>
         </div>
         <div className="header-user">
+          <div className="notif-wrapper">
+            <NotificationBell />
+            <NotificationPanel />
+          </div>
           {userData?.photoBase64 ? (
             <img src={userData.photoBase64} alt="" className="user-avatar-img" />
           ) : (

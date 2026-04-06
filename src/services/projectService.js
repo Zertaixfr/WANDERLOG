@@ -1,5 +1,6 @@
 // Service de gestion des projets de voyage
 import { isFirebaseConfigured, db } from './firebase'
+import { createNotification } from './notificationService'
 
 // Générer un code de partage unique (6 caractères)
 const generateCode = () => {
@@ -116,10 +117,10 @@ const imageToBase64 = (file, maxSize = 400, quality = 0.5) => {
 }
 
 // Ajouter une étape/trajet au projet (avec photo optionnelle)
-export const addTrip = async (projectId, tripData, photoFile = null) => {
+export const addTrip = async (projectId, tripData, photoFile = null, addedByUserId = null) => {
   if (!isFirebaseConfigured) return null
 
-  const { collection, addDoc, serverTimestamp } = await import('firebase/firestore')
+  const { collection, addDoc, doc, getDoc, serverTimestamp } = await import('firebase/firestore')
 
   // Convertir photo en base64 miniature (pas de Firebase Storage)
   const photoUrl = photoFile ? await imageToBase64(photoFile) : null
@@ -139,6 +140,25 @@ export const addTrip = async (projectId, tripData, photoFile = null) => {
     collection(db, 'projects', projectId, 'trips'),
     trip
   )
+
+  // Notifier tous les membres du projet (sauf celui qui ajoute)
+  if (addedByUserId) {
+    const projectSnap = await getDoc(doc(db, 'projects', projectId))
+    if (projectSnap.exists()) {
+      const members = projectSnap.data().members || []
+      members.forEach((memberId) => {
+        if (memberId !== addedByUserId) {
+          createNotification(memberId, {
+            type: 'new_trip',
+            message: `Nouvelle étape : ${tripData.city}, ${tripData.country}`,
+            fromUser: '',
+            projectId,
+          }).catch(() => {})
+        }
+      })
+    }
+  }
+
   return { id: docRef.id, ...trip }
 }
 
@@ -209,6 +229,28 @@ export const createProjectPost = async (projectId, postData, mediaFiles = []) =>
     collection(db, 'projects', projectId, 'posts'),
     post
   )
+
+  // Notifier tous les membres du projet (sauf l'auteur)
+  if (postData.authorId) {
+    const { doc, getDoc } = await import('firebase/firestore')
+    const projectSnap = await getDoc(doc(db, 'projects', projectId))
+    if (projectSnap.exists()) {
+      const members = projectSnap.data().members || []
+      members.forEach((memberId) => {
+        if (memberId !== postData.authorId) {
+          createNotification(memberId, {
+            type: 'new_post',
+            message: `${postData.authorName || 'Le voyageur'} a publié un nouveau post`,
+            fromUser: postData.authorName || '',
+            fromUserPhoto: postData.authorPhoto || null,
+            postId: docRef.id,
+            projectId,
+          }).catch(() => {})
+        }
+      })
+    }
+  }
+
   return docRef.id
 }
 
@@ -237,7 +279,7 @@ export const subscribeToProjectPosts = (projectId, callback) => {
 }
 
 // Liker un post dans un projet
-export const toggleProjectLike = async (projectId, postId, userId) => {
+export const toggleProjectLike = async (projectId, postId, userId, userName, userPhoto) => {
   if (!isFirebaseConfigured) return
 
   const { doc, getDoc, updateDoc, arrayUnion, arrayRemove, increment } = await import('firebase/firestore')
@@ -246,20 +288,33 @@ export const toggleProjectLike = async (projectId, postId, userId) => {
 
   if (!postSnap.exists()) return
 
-  const likes = postSnap.data().likes || []
+  const postData = postSnap.data()
+  const likes = postData.likes || []
   const hasLiked = likes.includes(userId)
 
   await updateDoc(postRef, {
     likes: hasLiked ? arrayRemove(userId) : arrayUnion(userId),
     likesCount: increment(hasLiked ? -1 : 1),
   })
+
+  // Notifier l'auteur du post (sauf si c'est soi-même, et seulement pour un like)
+  if (!hasLiked && postData.authorId && postData.authorId !== userId) {
+    createNotification(postData.authorId, {
+      type: 'like',
+      message: `${userName || 'Quelqu\'un'} a aimé votre post`,
+      fromUser: userName || '',
+      fromUserPhoto: userPhoto || null,
+      postId,
+      projectId,
+    }).catch(() => {})
+  }
 }
 
 // Ajouter un commentaire à un post dans un projet
 export const addProjectComment = async (projectId, postId, comment) => {
   if (!isFirebaseConfigured) return
 
-  const { collection, addDoc, doc, updateDoc, increment, serverTimestamp } = await import('firebase/firestore')
+  const { collection, addDoc, doc, updateDoc, getDoc, increment, serverTimestamp } = await import('firebase/firestore')
 
   await addDoc(
     collection(db, 'projects', projectId, 'posts', postId, 'comments'),
@@ -272,9 +327,26 @@ export const addProjectComment = async (projectId, postId, comment) => {
     }
   )
 
-  await updateDoc(doc(db, 'projects', projectId, 'posts', postId), {
+  const postRef = doc(db, 'projects', projectId, 'posts', postId)
+  await updateDoc(postRef, {
     commentsCount: increment(1),
   })
+
+  // Notifier l'auteur du post (sauf si c'est soi-même)
+  const postSnap = await getDoc(postRef)
+  if (postSnap.exists()) {
+    const postData = postSnap.data()
+    if (postData.authorId && postData.authorId !== comment.userId) {
+      createNotification(postData.authorId, {
+        type: 'comment',
+        message: `${comment.userName || 'Quelqu\'un'} a commenté votre post`,
+        fromUser: comment.userName || '',
+        fromUserPhoto: comment.userPhoto || null,
+        postId,
+        projectId,
+      }).catch(() => {})
+    }
+  }
 }
 
 // Écouter les commentaires d'un post

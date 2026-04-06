@@ -68,7 +68,7 @@ const PostCard = ({ post, demoMode }) => {
     }
 
     const { toggleProjectLike } = await import('../services/projectService')
-    await toggleProjectLike(project.id, post.id, user.uid)
+    await toggleProjectLike(project.id, post.id, user.uid, user.displayName, userData?.photoBase64)
   }
 
   const handleComment = async (e) => {
