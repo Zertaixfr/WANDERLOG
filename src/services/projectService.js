@@ -150,9 +150,11 @@ export const addTrip = async (projectId, tripData, photoFiles = [], addedByUserI
     latitude: tripData.latitude,
     longitude: tripData.longitude,
     arrivalDate: tripData.arrivalDate || null,
+    transport: tripData.transport || null,
     notes: tripData.notes || '',
     photoUrl: photoUrls[0] || null,
     photos: photoUrls,
+    reactions: {},
     createdAt: serverTimestamp(),
   }
 
@@ -204,6 +206,32 @@ export const subscribeToTrips = (projectId, callback) => {
   init()
 
   return () => unsubscribe()
+}
+
+// Ajouter/retirer une réaction emoji sur une étape
+export const toggleTripReaction = async (projectId, tripId, userId, emoji) => {
+  if (!isFirebaseConfigured || !userId || !emoji) return
+
+  const { doc, getDoc, updateDoc } = await import('firebase/firestore')
+  const tripRef = doc(db, 'projects', projectId, 'trips', tripId)
+  const tripSnap = await getDoc(tripRef)
+
+  if (!tripSnap.exists()) return
+
+  const reactions = tripSnap.data().reactions || {}
+  const emojiUsers = reactions[emoji] || []
+  const hasReacted = emojiUsers.includes(userId)
+
+  if (hasReacted) {
+    // Retirer la réaction
+    reactions[emoji] = emojiUsers.filter((id) => id !== userId)
+    if (reactions[emoji].length === 0) delete reactions[emoji]
+  } else {
+    // Ajouter la réaction
+    reactions[emoji] = [...emojiUsers, userId]
+  }
+
+  await updateDoc(tripRef, { reactions })
 }
 
 // Supprimer une étape

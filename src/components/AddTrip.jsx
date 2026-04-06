@@ -30,6 +30,19 @@ const compressImage = (file, maxSize = 600, quality = 0.6) => {
   })
 }
 
+const TRANSPORT_MODES = [
+  { id: 'plane', label: 'Avion', icon: '\u2708\uFE0F' },
+  { id: 'boat', label: 'Bateau', icon: '\u26F5' },
+  { id: 'car', label: 'Voiture', icon: '\uD83D\uDE97' },
+  { id: 'bus', label: 'Bus', icon: '\uD83D\uDE8C' },
+  { id: 'train', label: 'Train', icon: '\uD83D\uDE84' },
+  { id: 'bike', label: 'V\u00e9lo', icon: '\uD83D\uDEB2' },
+  { id: 'walk', label: '\u00c0 pied', icon: '\uD83D\uDEB6' },
+  { id: 'motorcycle', label: 'Moto', icon: '\uD83C\uDFCD\uFE0F' },
+  { id: 'hitchhike', label: 'Auto-stop', icon: '\uD83D\uDC4D' },
+  { id: 'other', label: 'Autre', icon: '\uD83D\uDEA9' },
+]
+
 const AddTrip = ({ onTripAdded }) => {
   const { project, isOwner } = useProject()
   const { user } = useAuth()
@@ -39,6 +52,7 @@ const AddTrip = ({ onTripAdded }) => {
   const [lat, setLat] = useState('')
   const [lng, setLng] = useState('')
   const [arrivalDate, setArrivalDate] = useState('')
+  const [transport, setTransport] = useState('')
   const [notes, setNotes] = useState('')
   const [photos, setPhotos] = useState([])
   const [photoPreviews, setPhotoPreviews] = useState([])
@@ -107,6 +121,7 @@ const AddTrip = ({ onTripAdded }) => {
         latitude: parseFloat(lat),
         longitude: parseFloat(lng),
         arrivalDate: arrivalDate || null,
+        transport: transport || null,
         notes: notes.trim(),
       }, compressedPhotos, user?.uid)
 
@@ -116,6 +131,7 @@ const AddTrip = ({ onTripAdded }) => {
       setLat('')
       setLng('')
       setArrivalDate('')
+      setTransport('')
       setNotes('')
       setPhotos([])
       setPhotoPreviews([])
@@ -188,6 +204,25 @@ const AddTrip = ({ onTripAdded }) => {
               className="form-input"
               placeholder="Date d'arriv&eacute;e"
             />
+          </div>
+
+          {/* Mode de transport */}
+          <div className="transport-section">
+            <p className="transport-label">Comment je me suis d&eacute;plac&eacute;</p>
+            <div className="transport-grid">
+              {TRANSPORT_MODES.map((mode) => (
+                <button
+                  key={mode.id}
+                  type="button"
+                  className={`transport-chip ${transport === mode.id ? 'transport-active' : ''}`}
+                  onClick={() => setTransport(transport === mode.id ? '' : mode.id)}
+                  title={mode.label}
+                >
+                  <span className="transport-icon">{mode.icon}</span>
+                  <span className="transport-name">{mode.label}</span>
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Upload photos (jusqu'à 6) */}
