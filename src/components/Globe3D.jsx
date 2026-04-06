@@ -29,12 +29,21 @@ const createArc = (start, end, radius) => {
   return points
 }
 
-const Globe3D = ({ travelerStatus, posts = [] }) => {
+const Globe3D = ({ travelerStatus, posts = [], trips = [] }) => {
   const mountRef = useRef(null)
   const [selectedStop, setSelectedStop] = useState(null)
 
-  // Étapes du voyage
-  const stops = posts
+  // Étapes du voyage — combine les trips (étapes) et les posts avec coordonnées
+  const tripStops = trips
+    .filter((t) => t.latitude && t.longitude)
+    .map((t) => ({
+      name: t.city || 'Inconnu',
+      lat: t.latitude,
+      lng: t.longitude,
+      country: t.country || '',
+    }))
+
+  const postStops = posts
     .filter((p) => p.coordinates)
     .map((p) => ({
       name: p.location || p.country || 'Inconnu',
@@ -42,6 +51,15 @@ const Globe3D = ({ travelerStatus, posts = [] }) => {
       lng: p.coordinates.longitude,
       country: p.country || '',
     }))
+
+  // Dédupliquer par ville
+  const seen = new Set()
+  const stops = [...tripStops, ...postStops].filter((s) => {
+    const key = `${s.lat.toFixed(2)},${s.lng.toFixed(2)}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
 
   // Position actuelle
   const currentPosition = travelerStatus
@@ -302,7 +320,7 @@ const Globe3D = ({ travelerStatus, posts = [] }) => {
       renderer.dispose()
       container.removeChild(renderer.domElement)
     }
-  }, [stops.length, currentPosition?.lat, currentPosition?.lng])
+  }, [stops.length, trips.length, currentPosition?.lat, currentPosition?.lng])
 
   return (
     <div className="globe-section">
