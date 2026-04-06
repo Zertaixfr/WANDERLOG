@@ -234,6 +234,14 @@ export const toggleTripReaction = async (projectId, tripId, userId, emoji) => {
   await updateDoc(tripRef, { reactions })
 }
 
+// Modifier une étape
+export const updateTrip = async (projectId, tripId, updates) => {
+  if (!isFirebaseConfigured) return
+
+  const { doc, updateDoc } = await import('firebase/firestore')
+  await updateDoc(doc(db, 'projects', projectId, 'trips', tripId), updates)
+}
+
 // Supprimer une étape
 export const deleteTrip = async (projectId, tripId) => {
   if (!isFirebaseConfigured) return
@@ -300,6 +308,22 @@ export const createProjectPost = async (projectId, postData, mediaFiles = []) =>
   }
 
   return docRef.id
+}
+
+// Modifier un post
+export const updateProjectPost = async (projectId, postId, updates) => {
+  if (!isFirebaseConfigured) return
+
+  const { doc, updateDoc } = await import('firebase/firestore')
+  await updateDoc(doc(db, 'projects', projectId, 'posts', postId), updates)
+}
+
+// Supprimer un post
+export const deleteProjectPost = async (projectId, postId) => {
+  if (!isFirebaseConfigured) return
+
+  const { doc, deleteDoc } = await import('firebase/firestore')
+  await deleteDoc(doc(db, 'projects', projectId, 'posts', postId))
 }
 
 // Écouter les posts d'un projet en temps réel
@@ -395,6 +419,25 @@ export const addProjectComment = async (projectId, postId, comment) => {
       }).catch(() => {})
     }
   }
+}
+
+// Modifier un commentaire
+export const updateProjectComment = async (projectId, postId, commentId, text) => {
+  if (!isFirebaseConfigured) return
+
+  const { doc, updateDoc } = await import('firebase/firestore')
+  await updateDoc(doc(db, 'projects', projectId, 'posts', postId, 'comments', commentId), { text })
+}
+
+// Supprimer un commentaire
+export const deleteProjectComment = async (projectId, postId, commentId) => {
+  if (!isFirebaseConfigured) return
+
+  const { doc, deleteDoc, updateDoc, increment } = await import('firebase/firestore')
+  await deleteDoc(doc(db, 'projects', projectId, 'posts', postId, 'comments', commentId))
+  await updateDoc(doc(db, 'projects', projectId, 'posts', postId), {
+    commentsCount: increment(-1),
+  })
 }
 
 // Écouter les commentaires d'un post

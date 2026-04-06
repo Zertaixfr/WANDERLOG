@@ -286,47 +286,119 @@ const TravelerProfile = ({ travelerStatus, posts = [], trips = [] }) => {
         <div className="profile-card">
           <h4 className="card-title">&Eacute;tapes ({validTrips.length})</h4>
           <div className="stages-list">
-            {validTrips.map((t, i) => {
-              const tripPhotos = t.photos?.length > 0 ? t.photos : (t.photoUrl ? [t.photoUrl] : [])
-              return (
-                <div key={t.id || i} className="stage-item">
-                  <div className="stage-header">
-                    {t.transport ? (
-                      <span className="stage-transport-icon" title={TRANSPORT_LABELS[t.transport]}>
-                        {TRANSPORT_ICONS[t.transport] || '\uD83D\uDEA9'}
-                      </span>
-                    ) : (
-                      <div className="recent-dot" style={{ background: 'var(--accent)' }} />
-                    )}
-                    <div className="stage-info">
-                      <p className="stage-city">
-                        {t.city}{t.country ? `, ${t.country}` : ''}
-                      </p>
-                      <div className="stage-meta">
-                        {t.arrivalDate && (
-                          <span className="recent-date">
-                            {new Date(t.arrivalDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
-                          </span>
-                        )}
-                        {t.transport && (
-                          <span className="stage-transport-label">
-                            {TRANSPORT_LABELS[t.transport]}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  {t.notes && <p className="stage-notes">{t.notes}</p>}
-                  {tripPhotos.length > 0 && (
-                    <PhotoGallery photos={tripPhotos} city={t.city} />
-                  )}
-                  <TripReactions trip={t} />
-                </div>
-              )
-            })}
+            {validTrips.map((t, i) => (
+              <StageItem key={t.id || i} trip={t} index={i} />
+            ))}
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+// Composant étape — éditable et supprimable par le propriétaire
+const StageItem = ({ trip: t, index }) => {
+  const { user, demoMode } = useAuth()
+  const { project, isOwner } = useProject()
+  const [showMenu, setShowMenu] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [editCity, setEditCity] = useState(t.city || '')
+  const [editCountry, setEditCountry] = useState(t.country || '')
+  const [editNotes, setEditNotes] = useState(t.notes || '')
+  const [editDate, setEditDate] = useState(t.arrivalDate || '')
+  const [editTransport, setEditTransport] = useState(t.transport || '')
+
+  const tripPhotos = t.photos?.length > 0 ? t.photos : (t.photoUrl ? [t.photoUrl] : [])
+
+  const handleSave = async () => {
+    if (!editCity.trim() || demoMode) return
+    const { updateTrip } = await import('../services/projectService')
+    await updateTrip(project.id, t.id, {
+      city: editCity.trim(),
+      country: editCountry.trim(),
+      notes: editNotes.trim(),
+      arrivalDate: editDate || null,
+      transport: editTransport || null,
+    })
+    setEditing(false)
+  }
+
+  const handleDelete = async () => {
+    if (demoMode) return
+    if (!confirm(`Supprimer l'\u00e9tape "${t.city}" ?`)) return
+    const { deleteTrip } = await import('../services/projectService')
+    await deleteTrip(project.id, t.id)
+  }
+
+  if (editing) {
+    return (
+      <div className="stage-item stage-editing">
+        <div className="edit-post-fields">
+          <input type="text" className="edit-inline-input" placeholder="Ville" value={editCity} onChange={(e) => setEditCity(e.target.value)} />
+          <input type="text" className="edit-inline-input" placeholder="Pays" value={editCountry} onChange={(e) => setEditCountry(e.target.value)} />
+        </div>
+        <div className="edit-post-fields">
+          <input type="date" className="edit-inline-input" value={editDate} onChange={(e) => setEditDate(e.target.value)} />
+          <select className="edit-inline-input" value={editTransport} onChange={(e) => setEditTransport(e.target.value)}>
+            <option value="">Transport...</option>
+            {Object.entries(TRANSPORT_LABELS).map(([k, v]) => (
+              <option key={k} value={k}>{TRANSPORT_ICONS[k]} {v}</option>
+            ))}
+          </select>
+        </div>
+        <textarea className="edit-textarea" placeholder="Notes" value={editNotes} onChange={(e) => setEditNotes(e.target.value)} rows={2} />
+        <div className="edit-inline-actions">
+          <button className="edit-save-btn" onClick={handleSave}>Enregistrer</button>
+          <button className="edit-cancel-btn" onClick={() => { setEditing(false); setEditCity(t.city || ''); setEditCountry(t.country || ''); setEditNotes(t.notes || ''); setEditDate(t.arrivalDate || ''); setEditTransport(t.transport || '') }}>Annuler</button>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="stage-item">
+      <div className="stage-header">
+        {t.transport ? (
+          <span className="stage-transport-icon" title={TRANSPORT_LABELS[t.transport]}>
+            {TRANSPORT_ICONS[t.transport] || '\uD83D\uDEA9'}
+          </span>
+        ) : (
+          <div className="recent-dot" style={{ background: 'var(--accent)' }} />
+        )}
+        <div className="stage-info">
+          <p className="stage-city">
+            {t.city}{t.country ? `, ${t.country}` : ''}
+          </p>
+          <div className="stage-meta">
+            {t.arrivalDate && (
+              <span className="recent-date">
+                {new Date(t.arrivalDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+              </span>
+            )}
+            {t.transport && (
+              <span className="stage-transport-label">
+                {TRANSPORT_LABELS[t.transport]}
+              </span>
+            )}
+          </div>
+        </div>
+        {isOwner && !demoMode && (
+          <div className="item-menu-wrap">
+            <button className="item-menu-btn" onClick={() => setShowMenu(!showMenu)}>&#8943;</button>
+            {showMenu && (
+              <div className="item-menu" onMouseLeave={() => setShowMenu(false)}>
+                <button onClick={() => { setEditing(true); setShowMenu(false) }}>Modifier</button>
+                <button className="item-menu-danger" onClick={() => { handleDelete(); setShowMenu(false) }}>Supprimer</button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+      {t.notes && <p className="stage-notes">{t.notes}</p>}
+      {tripPhotos.length > 0 && (
+        <PhotoGallery photos={tripPhotos} city={t.city} />
+      )}
+      <TripReactions trip={t} />
     </div>
   )
 }
