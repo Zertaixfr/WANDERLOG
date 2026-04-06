@@ -99,7 +99,11 @@ const PostCard = ({ post, demoMode }) => {
     <div className="post-card">
       <div className="post-header">
         <div className="post-author-info">
-          <div className="post-avatar">{authorInitial}</div>
+          {post.authorPhoto ? (
+            <img src={post.authorPhoto} alt="" className="post-avatar-img" />
+          ) : (
+            <div className="post-avatar">{authorInitial}</div>
+          )}
           <div>
             <p className="post-author">{post.authorName || 'Voyageur'}</p>
             {post.location && (

@@ -26,7 +26,7 @@ const compressImage = (file, maxSize = 1200, quality = 0.7) => {
 }
 
 const CreatePost = () => {
-  const { user } = useAuth()
+  const { user, userData } = useAuth()
   const { project, isOwner } = useProject()
   const [text, setText] = useState('')
   const [location, setLocation] = useState('')
@@ -79,6 +79,7 @@ const CreatePost = () => {
           : null,
         authorId: user.uid,
         authorName: user.displayName || 'Voyageur',
+        authorPhoto: userData?.photoBase64 || null,
       }, await Promise.all(files.map(f => compressImage(f))))
 
       setText('')

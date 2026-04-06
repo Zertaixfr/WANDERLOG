@@ -198,6 +198,7 @@ export const createProjectPost = async (projectId, postData, mediaFiles = []) =>
     media: mediaUrls,
     authorId: postData.authorId,
     authorName: postData.authorName,
+    authorPhoto: postData.authorPhoto || null,
     likes: [],
     likesCount: 0,
     commentsCount: 0,

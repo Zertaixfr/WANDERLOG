@@ -5,7 +5,7 @@ import { useProject } from '../contexts/ProjectContext'
 import { isFirebaseConfigured } from '../services/firebase'
 
 const ProjectScreen = () => {
-  const { user, demoMode } = useAuth()
+  const { user, userData, demoMode } = useAuth()
   const { selectProject } = useProject()
   const [mode, setMode] = useState(null) // null, 'create', 'join'
   const [existingProjects, setExistingProjects] = useState([])
@@ -125,14 +125,20 @@ const ProjectScreen = () => {
       <div className="project-container">
         {/* En-tête */}
         <div className="project-header">
-          <div className="project-logo">
-            <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" strokeWidth="1.2">
-              <circle cx="12" cy="12" r="10" />
-              <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" fill="currentColor" opacity="0.6" />
-            </svg>
-          </div>
+          {userData?.photoBase64 ? (
+            <img src={userData.photoBase64} alt="" className="project-user-avatar" />
+          ) : (
+            <div className="project-logo">
+              <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" strokeWidth="1.2">
+                <circle cx="12" cy="12" r="10" />
+                <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" fill="currentColor" opacity="0.6" />
+              </svg>
+            </div>
+          )}
           <h1 className="project-title">Wanderlog</h1>
-          <p className="project-subtitle">Cr&eacute;ez ou rejoignez un carnet de voyage</p>
+          <p className="project-subtitle">
+            {user?.displayName ? `Bienvenue ${user.displayName} !` : 'Cr\u00e9ez ou rejoignez un carnet de voyage'}
+          </p>
         </div>
 
         {/* Erreur */}
