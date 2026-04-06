@@ -114,7 +114,16 @@ function App() {
   // App principale avec projet actif
   return (
     <div className="app">
-      <Header activeTab={activeTab} setActiveTab={setActiveTab} />
+      <Header
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        posts={posts}
+        trips={trips}
+        onSearchResult={(result) => {
+          if (result.type === 'post') setActiveTab('feed')
+          else if (result.type === 'trip') setActiveTab('globe')
+        }}
+      />
 
       {demoMode && (
         <div className="demo-banner">

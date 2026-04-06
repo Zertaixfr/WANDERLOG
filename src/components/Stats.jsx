@@ -1,5 +1,6 @@
 // Dashboard de statistiques — calculées depuis les trips et posts du projet
 import { useProject } from '../contexts/ProjectContext'
+import ExportPDF from './ExportPDF'
 
 // Distance haversine en km
 const haversineKm = (lat1, lng1, lat2, lng2) => {
@@ -55,10 +56,15 @@ const Stats = ({ trips = [], posts = [] }) => {
 
   return (
     <div className="stats-section">
-      <h2 className="section-title">Statistiques</h2>
-      {project && (
-        <p className="section-subtitle">{project.name}</p>
-      )}
+      <div className="stats-header-row">
+        <div>
+          <h2 className="section-title">Statistiques</h2>
+          {project && (
+            <p className="section-subtitle">{project.name}</p>
+          )}
+        </div>
+        <ExportPDF trips={trips} posts={posts} />
+      </div>
 
       <div className="stats-grid">
         <div className="stat-card">

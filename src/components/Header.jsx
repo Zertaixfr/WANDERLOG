@@ -1,13 +1,40 @@
 // En-tête de l'application — ambiance carnet de voyage
+import { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useProject } from '../contexts/ProjectContext'
 import { logoutUser } from '../services/authService'
 import { NotificationBell } from './Notifications'
 import NotificationPanel from './Notifications'
+import SearchBar from './SearchBar'
 
-const Header = ({ activeTab, setActiveTab }) => {
+const Header = ({ activeTab, setActiveTab, posts, trips, onSearchResult }) => {
   const { user, userData, isAdmin, demoMode } = useAuth()
   const { project, isOwner, leaveProject } = useProject()
+  const [shareToast, setShareToast] = useState(false)
+
+  const handleShare = async () => {
+    const shareData = {
+      title: `Wanderlog — ${project?.name || 'Voyage'}`,
+      text: `Suivez mon voyage "${project?.name}" sur Wanderlog ! Code d'accès : ${project?.code}`,
+      url: window.location.origin + '?join=' + project?.code,
+    }
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData)
+      } else {
+        await navigator.clipboard.writeText(shareData.text + '\n' + shareData.url)
+        setShareToast(true)
+        setTimeout(() => setShareToast(false), 2500)
+      }
+    } catch {
+      // Cancelled or failed — try clipboard fallback
+      try {
+        await navigator.clipboard.writeText(shareData.text + '\n' + shareData.url)
+        setShareToast(true)
+        setTimeout(() => setShareToast(false), 2500)
+      } catch { /* ignore */ }
+    }
+  }
 
   const handleLogout = async () => {
     if (demoMode) return
@@ -45,6 +72,16 @@ const Header = ({ activeTab, setActiveTab }) => {
           </div>
         </div>
         <div className="header-user">
+          <button className="share-btn" onClick={handleShare} title="Partager le carnet">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="18" cy="5" r="3" />
+              <circle cx="6" cy="12" r="3" />
+              <circle cx="18" cy="19" r="3" />
+              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" />
+              <line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+            </svg>
+          </button>
+          {shareToast && <div className="share-toast">Lien copi&eacute; !</div>}
           <div className="notif-wrapper">
             <NotificationBell />
             <NotificationPanel />
@@ -73,19 +110,22 @@ const Header = ({ activeTab, setActiveTab }) => {
         </div>
       </div>
 
-      {/* Navigation */}
+      {/* Navigation + Recherche */}
       <nav className="header-nav">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            className={`nav-tab ${activeTab === tab.id ? 'active' : ''}`}
-            onClick={() => setActiveTab(tab.id)}
-          >
-            <span className="nav-icon" dangerouslySetInnerHTML={{ __html: tab.icon }} />
-            <span className="nav-label">{tab.label}</span>
-            {activeTab === tab.id && <span className="nav-indicator" />}
-          </button>
-        ))}
+        <div className="nav-tabs">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              className={`nav-tab ${activeTab === tab.id ? 'active' : ''}`}
+              onClick={() => setActiveTab(tab.id)}
+            >
+              <span className="nav-icon" dangerouslySetInnerHTML={{ __html: tab.icon }} />
+              <span className="nav-label">{tab.label}</span>
+              {activeTab === tab.id && <span className="nav-indicator" />}
+            </button>
+          ))}
+        </div>
+        <SearchBar posts={posts} trips={trips} onResultClick={onSearchResult} />
       </nav>
     </header>
   )
