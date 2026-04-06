@@ -31,12 +31,18 @@ const ProjectScreen = () => {
     }
     const load = async () => {
       try {
+        const { isFirebaseConfigured } = await import('../services/firebase')
+        if (!isFirebaseConfigured) {
+          setError('DEBUG: Firebase non configuré au chargement')
+          setLoading(false)
+          return
+        }
         const { getUserProjects } = await import('../services/projectService')
         const projects = await getUserProjects(user.uid)
         setExistingProjects(projects)
       } catch (err) {
         console.error('Erreur chargement projets:', err)
-        setError('Erreur chargement: ' + (err.code || err.message))
+        setError('DEBUG LOAD: [' + (err.code || 'no-code') + '] ' + (err.message || String(err)))
       }
       setLoading(false)
     }
@@ -51,6 +57,19 @@ const ProjectScreen = () => {
     setSubmitting(true)
 
     try {
+      // Debug : vérifier Firebase
+      const { isFirebaseConfigured, db } = await import('../services/firebase')
+      if (!isFirebaseConfigured) {
+        setError('DEBUG: Firebase non configuré (isFirebaseConfigured=false). Vérifiez .env')
+        setSubmitting(false)
+        return
+      }
+      if (!db) {
+        setError('DEBUG: db est null. Firebase Firestore non initialisé.')
+        setSubmitting(false)
+        return
+      }
+
       const { createProject } = await import('../services/projectService')
       const project = await createProject(
         {
@@ -61,14 +80,14 @@ const ProjectScreen = () => {
         user.uid
       )
       if (!project) {
-        setError('Erreur : Firebase non configuré ou retour null')
+        setError('DEBUG: createProject a retourné null. isFirebaseConfigured=' + isFirebaseConfigured)
         setSubmitting(false)
         return
       }
       setCreatedCode(project.code)
     } catch (err) {
-      setError('Erreur : ' + (err.code || err.message || String(err)))
-      console.error(err)
+      setError('DEBUG ERREUR: [' + (err.code || 'no-code') + '] ' + (err.message || String(err)))
+      console.error('createProject error:', err)
     }
     setSubmitting(false)
   }
@@ -92,17 +111,23 @@ const ProjectScreen = () => {
     setSubmitting(true)
 
     try {
+      const { isFirebaseConfigured, db } = await import('../services/firebase')
+      if (!isFirebaseConfigured || !db) {
+        setError('DEBUG: Firebase non configuré ou db null')
+        setSubmitting(false)
+        return
+      }
       const { joinProject } = await import('../services/projectService')
       const project = await joinProject(joinCode.trim(), user.uid)
       if (!project) {
-        setError('Erreur : Firebase non configuré ou retour null')
+        setError('DEBUG: joinProject a retourné null')
         setSubmitting(false)
         return
       }
       selectProject(project)
     } catch (err) {
-      setError('Erreur : ' + (err.code || err.message || String(err)))
-      console.error(err)
+      setError('DEBUG ERREUR: [' + (err.code || 'no-code') + '] ' + (err.message || String(err)))
+      console.error('joinProject error:', err)
     }
     setSubmitting(false)
   }
