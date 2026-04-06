@@ -97,11 +97,20 @@ export const subscribeToProject = async (projectId, callback) => {
 }
 
 // Compresser et convertir en base64 (stocké directement dans Firestore, pas de Storage)
-const imageToBase64 = (file, maxSize = 400, quality = 0.5) => {
+const imageToBase64 = (file, maxSize = 400, quality = 0.45) => {
   return new Promise((resolve) => {
-    if (!file || !file.type.startsWith('image/')) { resolve(null); return }
+    if (!file) { resolve(null); return }
+    // Support File, Blob, ou déjà une string base64
+    if (typeof file === 'string') {
+      resolve(file.startsWith('data:') ? file : null)
+      return
+    }
+    if (!file.type || !file.type.startsWith('image/')) { resolve(null); return }
+
+    const url = URL.createObjectURL(file)
     const img = new Image()
     img.onload = () => {
+      URL.revokeObjectURL(url)
       let w = img.width, h = img.height
       if (w > h && w > maxSize) { h = h * maxSize / w; w = maxSize }
       else if (h > maxSize) { w = w * maxSize / h; h = maxSize }
@@ -111,8 +120,11 @@ const imageToBase64 = (file, maxSize = 400, quality = 0.5) => {
       canvas.getContext('2d').drawImage(img, 0, 0, w, h)
       resolve(canvas.toDataURL('image/jpeg', quality))
     }
-    img.onerror = () => resolve(null)
-    img.src = URL.createObjectURL(file)
+    img.onerror = () => {
+      URL.revokeObjectURL(url)
+      resolve(null)
+    }
+    img.src = url
   })
 }
 
@@ -125,9 +137,11 @@ export const addTrip = async (projectId, tripData, photoFiles = [], addedByUserI
   // Support ancien format (un seul fichier) et nouveau (tableau)
   const files = Array.isArray(photoFiles) ? photoFiles : (photoFiles ? [photoFiles] : [])
 
-  // Convertir chaque photo en base64 miniature
+  // Convertir chaque photo en base64 miniature (qualité réduite si beaucoup de photos)
+  const quality = files.length > 3 ? 0.35 : 0.45
+  const size = files.length > 3 ? 300 : 400
   const photoUrls = (await Promise.all(
-    files.map((f) => imageToBase64(f))
+    files.map((f) => imageToBase64(f, size, quality))
   )).filter(Boolean)
 
   const trip = {

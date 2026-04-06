@@ -3,13 +3,10 @@ import { useState, useRef } from 'react'
 import { useProject } from '../contexts/ProjectContext'
 import { useAuth } from '../contexts/AuthContext'
 
-// Compresser une image avant upload (max 800px, qualité 0.7)
-const compressImage = (file, maxSize = 800, quality = 0.7) => {
+// Compresser une image avant upload (toujours compresser pour multi-photo)
+const compressImage = (file, maxSize = 600, quality = 0.6) => {
   return new Promise((resolve) => {
-    // Si ce n'est pas une image, retourner tel quel
-    if (!file.type.startsWith('image/')) { resolve(file); return }
-    // Si déjà petit (< 500KB), pas besoin
-    if (file.size < 500000) { resolve(file); return }
+    if (!file || !file.type.startsWith('image/')) { resolve(file); return }
 
     const img = new Image()
     const canvas = document.createElement('canvas')
@@ -21,9 +18,14 @@ const compressImage = (file, maxSize = 800, quality = 0.7) => {
       canvas.height = h
       canvas.getContext('2d').drawImage(img, 0, 0, w, h)
       canvas.toBlob((blob) => {
-        resolve(new File([blob], file.name, { type: 'image/jpeg' }))
+        if (blob) {
+          resolve(new File([blob], file.name, { type: 'image/jpeg' }))
+        } else {
+          resolve(file)
+        }
       }, 'image/jpeg', quality)
     }
+    img.onerror = () => resolve(file)
     img.src = URL.createObjectURL(file)
   })
 }
