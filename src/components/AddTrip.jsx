@@ -2,6 +2,31 @@
 import { useState, useRef } from 'react'
 import { useProject } from '../contexts/ProjectContext'
 
+// Compresser une image avant upload (max 800px, qualité 0.7)
+const compressImage = (file, maxSize = 800, quality = 0.7) => {
+  return new Promise((resolve) => {
+    // Si ce n'est pas une image, retourner tel quel
+    if (!file.type.startsWith('image/')) { resolve(file); return }
+    // Si déjà petit (< 500KB), pas besoin
+    if (file.size < 500000) { resolve(file); return }
+
+    const img = new Image()
+    const canvas = document.createElement('canvas')
+    img.onload = () => {
+      let w = img.width, h = img.height
+      if (w > h && w > maxSize) { h = h * maxSize / w; w = maxSize }
+      else if (h > maxSize) { w = w * maxSize / h; h = maxSize }
+      canvas.width = w
+      canvas.height = h
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h)
+      canvas.toBlob((blob) => {
+        resolve(new File([blob], file.name, { type: 'image/jpeg' }))
+      }, 'image/jpeg', quality)
+    }
+    img.src = URL.createObjectURL(file)
+  })
+}
+
 const AddTrip = ({ onTripAdded }) => {
   const { project, isOwner } = useProject()
   const [isOpen, setIsOpen] = useState(false)
@@ -19,14 +44,23 @@ const AddTrip = ({ onTripAdded }) => {
 
   if (!isOwner) return null
 
+  const [gpsLoading, setGpsLoading] = useState(false)
+
   const getCurrentPosition = () => {
     if (!navigator.geolocation) return
+    setGpsLoading(true)
+    // D'abord une position rapide (basse précision)
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setLat(String(pos.coords.latitude))
-        setLng(String(pos.coords.longitude))
+        setLat(String(pos.coords.latitude.toFixed(6)))
+        setLng(String(pos.coords.longitude.toFixed(6)))
+        setGpsLoading(false)
       },
-      (err) => console.error('Erreur GPS:', err)
+      (err) => {
+        console.error('Erreur GPS:', err)
+        setGpsLoading(false)
+      },
+      { enableHighAccuracy: false, timeout: 5000, maximumAge: 60000 }
     )
   }
 
@@ -53,6 +87,8 @@ const AddTrip = ({ onTripAdded }) => {
 
     try {
       const { addTrip } = await import('../services/projectService')
+      // Compresser la photo avant upload
+      const compressedPhoto = photo ? await compressImage(photo) : null
       await addTrip(project.id, {
         city: city.trim(),
         country: country.trim(),
@@ -60,7 +96,7 @@ const AddTrip = ({ onTripAdded }) => {
         longitude: parseFloat(lng),
         arrivalDate: arrivalDate || null,
         notes: notes.trim(),
-      }, photo)
+      }, compressedPhoto)
 
       // Reset
       setCity('')
@@ -127,8 +163,8 @@ const AddTrip = ({ onTripAdded }) => {
               className="form-input"
               required
             />
-            <button type="button" className="gps-btn" onClick={getCurrentPosition} title="Ma position">
-              &#128205;
+            <button type="button" className="gps-btn" onClick={getCurrentPosition} title="Ma position" disabled={gpsLoading}>
+              {gpsLoading ? '...' : '\u{1F4CD}'}
             </button>
           </div>
 

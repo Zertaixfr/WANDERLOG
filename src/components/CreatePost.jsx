@@ -3,6 +3,28 @@ import { useState, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useProject } from '../contexts/ProjectContext'
 
+// Compresser une image avant upload
+const compressImage = (file, maxSize = 1200, quality = 0.7) => {
+  return new Promise((resolve) => {
+    if (!file.type.startsWith('image/')) { resolve(file); return }
+    if (file.size < 500000) { resolve(file); return }
+    const img = new Image()
+    const canvas = document.createElement('canvas')
+    img.onload = () => {
+      let w = img.width, h = img.height
+      if (w > h && w > maxSize) { h = h * maxSize / w; w = maxSize }
+      else if (h > maxSize) { w = w * maxSize / h; h = maxSize }
+      canvas.width = w
+      canvas.height = h
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h)
+      canvas.toBlob((blob) => {
+        resolve(new File([blob], file.name, { type: 'image/jpeg' }))
+      }, 'image/jpeg', quality)
+    }
+    img.src = URL.createObjectURL(file)
+  })
+}
+
 const CreatePost = () => {
   const { user } = useAuth()
   const { project, isOwner } = useProject()
@@ -57,7 +79,7 @@ const CreatePost = () => {
           : null,
         authorId: user.uid,
         authorName: user.displayName || 'Voyageur',
-      }, files)
+      }, await Promise.all(files.map(f => compressImage(f))))
 
       setText('')
       setLocation('')
