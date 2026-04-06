@@ -116,14 +116,19 @@ const imageToBase64 = (file, maxSize = 400, quality = 0.5) => {
   })
 }
 
-// Ajouter une étape/trajet au projet (avec photo optionnelle)
-export const addTrip = async (projectId, tripData, photoFile = null, addedByUserId = null) => {
+// Ajouter une étape/trajet au projet (avec photos optionnelles)
+export const addTrip = async (projectId, tripData, photoFiles = [], addedByUserId = null) => {
   if (!isFirebaseConfigured) return null
 
   const { collection, addDoc, doc, getDoc, serverTimestamp } = await import('firebase/firestore')
 
-  // Convertir photo en base64 miniature (pas de Firebase Storage)
-  const photoUrl = photoFile ? await imageToBase64(photoFile) : null
+  // Support ancien format (un seul fichier) et nouveau (tableau)
+  const files = Array.isArray(photoFiles) ? photoFiles : (photoFiles ? [photoFiles] : [])
+
+  // Convertir chaque photo en base64 miniature
+  const photoUrls = (await Promise.all(
+    files.map((f) => imageToBase64(f))
+  )).filter(Boolean)
 
   const trip = {
     city: tripData.city,
@@ -132,7 +137,8 @@ export const addTrip = async (projectId, tripData, photoFile = null, addedByUser
     longitude: tripData.longitude,
     arrivalDate: tripData.arrivalDate || null,
     notes: tripData.notes || '',
-    photoUrl,
+    photoUrl: photoUrls[0] || null,
+    photos: photoUrls,
     createdAt: serverTimestamp(),
   }
 

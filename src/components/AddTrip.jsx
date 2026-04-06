@@ -38,8 +38,8 @@ const AddTrip = ({ onTripAdded }) => {
   const [lng, setLng] = useState('')
   const [arrivalDate, setArrivalDate] = useState('')
   const [notes, setNotes] = useState('')
-  const [photo, setPhoto] = useState(null)
-  const [photoPreview, setPhotoPreview] = useState(null)
+  const [photos, setPhotos] = useState([])
+  const [photoPreviews, setPhotoPreviews] = useState([])
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
   const fileRef = useRef(null)
@@ -67,18 +67,24 @@ const AddTrip = ({ onTripAdded }) => {
   }
 
   const handlePhotoChange = (e) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setPhoto(file)
-    const reader = new FileReader()
-    reader.onload = (ev) => setPhotoPreview(ev.target.result)
-    reader.readAsDataURL(file)
+    const files = Array.from(e.target.files || [])
+    if (files.length === 0) return
+    // Max 6 photos par étape
+    const remaining = 6 - photos.length
+    const newFiles = files.slice(0, remaining)
+
+    setPhotos((prev) => [...prev, ...newFiles])
+    newFiles.forEach((file) => {
+      const reader = new FileReader()
+      reader.onload = (ev) => setPhotoPreviews((prev) => [...prev, ev.target.result])
+      reader.readAsDataURL(file)
+    })
+    if (fileRef.current) fileRef.current.value = ''
   }
 
-  const removePhoto = () => {
-    setPhoto(null)
-    setPhotoPreview(null)
-    if (fileRef.current) fileRef.current.value = ''
+  const removePhoto = (index) => {
+    setPhotos((prev) => prev.filter((_, i) => i !== index))
+    setPhotoPreviews((prev) => prev.filter((_, i) => i !== index))
   }
 
   const handleSubmit = async (e) => {
@@ -89,8 +95,10 @@ const AddTrip = ({ onTripAdded }) => {
 
     try {
       const { addTrip } = await import('../services/projectService')
-      // Compresser la photo avant upload
-      const compressedPhoto = photo ? await compressImage(photo) : null
+      // Compresser toutes les photos avant upload
+      const compressedPhotos = await Promise.all(
+        photos.map((p) => compressImage(p))
+      )
       await addTrip(project.id, {
         city: city.trim(),
         country: country.trim(),
@@ -98,7 +106,7 @@ const AddTrip = ({ onTripAdded }) => {
         longitude: parseFloat(lng),
         arrivalDate: arrivalDate || null,
         notes: notes.trim(),
-      }, compressedPhoto, user?.uid)
+      }, compressedPhotos, user?.uid)
 
       // Reset
       setCity('')
@@ -107,8 +115,8 @@ const AddTrip = ({ onTripAdded }) => {
       setLng('')
       setArrivalDate('')
       setNotes('')
-      setPhoto(null)
-      setPhotoPreview(null)
+      setPhotos([])
+      setPhotoPreviews([])
       setIsOpen(false)
       if (onTripAdded) onTripAdded()
     } catch (err) {
@@ -180,21 +188,27 @@ const AddTrip = ({ onTripAdded }) => {
             />
           </div>
 
-          {/* Upload photo */}
+          {/* Upload photos (jusqu'à 6) */}
           <div className="trip-photo-upload">
-            {photoPreview ? (
-              <div className="trip-photo-preview">
-                <img src={photoPreview} alt="Aper&ccedil;u" />
-                <button type="button" className="trip-photo-remove" onClick={removePhoto}>&times;</button>
+            {photoPreviews.length > 0 && (
+              <div className="trip-photos-grid">
+                {photoPreviews.map((preview, i) => (
+                  <div key={i} className="trip-photo-preview">
+                    <img src={preview} alt={`Photo ${i + 1}`} />
+                    <button type="button" className="trip-photo-remove" onClick={() => removePhoto(i)}>&times;</button>
+                  </div>
+                ))}
               </div>
-            ) : (
+            )}
+            {photos.length < 6 && (
               <label className="trip-photo-label">
                 <span className="trip-photo-icon">&#128247;</span>
-                <span>Ajouter une photo</span>
+                <span>{photos.length === 0 ? 'Ajouter des photos' : `Ajouter (${photos.length}/6)`}</span>
                 <input
                   ref={fileRef}
                   type="file"
                   accept="image/*"
+                  multiple
                   onChange={handlePhotoChange}
                   hidden
                 />

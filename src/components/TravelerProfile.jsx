@@ -1,6 +1,7 @@
 // Profil voyageur — panneau latéral avec infos du projet
 import { useAuth } from '../contexts/AuthContext'
 import { useProject } from '../contexts/ProjectContext'
+import PhotoGallery from './PhotoGallery'
 
 // Distance haversine
 const haversineKm = (lat1, lng1, lat2, lng2) => {
@@ -63,9 +64,12 @@ const TravelerProfile = ({ travelerStatus, posts = [], trips = [] }) => {
           </div>
           <h3 className="status-city">{lastTrip.city}</h3>
           <p className="status-country">{lastTrip.country || ''}</p>
-          {lastTrip.photoUrl && (
-            <img src={lastTrip.photoUrl} alt={lastTrip.city} className="status-photo" />
-          )}
+          {(lastTrip.photos?.length > 0 || lastTrip.photoUrl) ? (
+            <PhotoGallery
+              photos={lastTrip.photos?.length > 0 ? lastTrip.photos : [lastTrip.photoUrl]}
+              city={lastTrip.city}
+            />
+          ) : null}
         </div>
       )}
 
@@ -126,26 +130,35 @@ const TravelerProfile = ({ travelerStatus, posts = [], trips = [] }) => {
         </div>
       )}
 
-      {/* Étapes parcourues */}
+      {/* Étapes parcourues avec galerie photos */}
       {validTrips.length > 0 && (
         <div className="profile-card">
           <h4 className="card-title">&Eacute;tapes ({validTrips.length})</h4>
-          <div className="recent-list">
-            {validTrips.map((t, i) => (
-              <div key={t.id || i} className="recent-item">
-                <div className="recent-dot" style={{ background: 'var(--accent)' }} />
-                <div className="recent-content">
-                  <p className="recent-text" style={{ fontWeight: 600 }}>
-                    {t.city}{t.country ? `, ${t.country}` : ''}
-                  </p>
-                  {t.arrivalDate && (
-                    <span className="recent-date">
-                      {new Date(t.arrivalDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
-                    </span>
+          <div className="stages-list">
+            {validTrips.map((t, i) => {
+              const tripPhotos = t.photos?.length > 0 ? t.photos : (t.photoUrl ? [t.photoUrl] : [])
+              return (
+                <div key={t.id || i} className="stage-item">
+                  <div className="stage-header">
+                    <div className="recent-dot" style={{ background: 'var(--accent)' }} />
+                    <div className="stage-info">
+                      <p className="stage-city">
+                        {t.city}{t.country ? `, ${t.country}` : ''}
+                      </p>
+                      {t.arrivalDate && (
+                        <span className="recent-date">
+                          {new Date(t.arrivalDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {t.notes && <p className="stage-notes">{t.notes}</p>}
+                  {tripPhotos.length > 0 && (
+                    <PhotoGallery photos={tripPhotos} city={t.city} />
                   )}
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
       )}
