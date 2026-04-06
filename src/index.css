@@ -2218,3 +2218,94 @@ body {
   font-size: 11px;
   white-space: nowrap;
 }
+
+/* ============================================
+   UPLOAD PHOTO TRIP
+   ============================================ */
+.trip-photo-upload {
+  margin-bottom: 12px;
+}
+
+.trip-photo-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: var(--bg-secondary);
+  border: 1px dashed var(--border-warm);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.trip-photo-label:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(212, 160, 68, 0.05);
+}
+
+.trip-photo-icon {
+  font-size: 20px;
+}
+
+.trip-photo-preview {
+  position: relative;
+  display: inline-block;
+}
+
+.trip-photo-preview img {
+  width: 100%;
+  max-height: 160px;
+  object-fit: cover;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-warm);
+}
+
+.trip-photo-remove {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+/* Globe stats bar */
+.globe-stats-bar {
+  display: flex;
+  gap: 8px;
+}
+
+.globe-stat {
+  font-size: 12px;
+  color: var(--accent);
+  background: rgba(212, 160, 68, 0.08);
+  padding: 3px 10px;
+  border-radius: 20px;
+  border: 1px solid var(--border-warm);
+  font-weight: 500;
+}
+
+/* Légende connecteur avec avion */
+.legend-connector {
+  display: flex;
+  align-items: center;
+  margin: 0 4px;
+  opacity: 0.5;
+}
+
+.legend-plane-icon {
+  font-size: 12px;
+  color: var(--accent);
+}

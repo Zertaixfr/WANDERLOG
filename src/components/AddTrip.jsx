@@ -1,5 +1,5 @@
 // Formulaire d'ajout d'étape/trajet — réservé au propriétaire du projet
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useProject } from '../contexts/ProjectContext'
 
 const AddTrip = ({ onTripAdded }) => {
@@ -11,7 +11,10 @@ const AddTrip = ({ onTripAdded }) => {
   const [lng, setLng] = useState('')
   const [arrivalDate, setArrivalDate] = useState('')
   const [notes, setNotes] = useState('')
+  const [photo, setPhoto] = useState(null)
+  const [photoPreview, setPhotoPreview] = useState(null)
   const [submitting, setSubmitting] = useState(false)
+  const fileRef = useRef(null)
 
   if (!isOwner) return null
 
@@ -24,6 +27,21 @@ const AddTrip = ({ onTripAdded }) => {
       },
       (err) => console.error('Erreur GPS:', err)
     )
+  }
+
+  const handlePhotoChange = (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setPhoto(file)
+    const reader = new FileReader()
+    reader.onload = (ev) => setPhotoPreview(ev.target.result)
+    reader.readAsDataURL(file)
+  }
+
+  const removePhoto = () => {
+    setPhoto(null)
+    setPhotoPreview(null)
+    if (fileRef.current) fileRef.current.value = ''
   }
 
   const handleSubmit = async (e) => {
@@ -40,7 +58,7 @@ const AddTrip = ({ onTripAdded }) => {
         longitude: parseFloat(lng),
         arrivalDate: arrivalDate || null,
         notes: notes.trim(),
-      })
+      }, photo)
 
       // Reset
       setCity('')
@@ -49,6 +67,8 @@ const AddTrip = ({ onTripAdded }) => {
       setLng('')
       setArrivalDate('')
       setNotes('')
+      setPhoto(null)
+      setPhotoPreview(null)
       setIsOpen(false)
       if (onTripAdded) onTripAdded()
     } catch (err) {
@@ -61,7 +81,7 @@ const AddTrip = ({ onTripAdded }) => {
     <div className="add-trip">
       {!isOpen ? (
         <button className="add-trip-toggle" onClick={() => setIsOpen(true)}>
-          &#43; Ajouter une &eacute;tape
+          + Ajouter une &eacute;tape
         </button>
       ) : (
         <form className="add-trip-form" onSubmit={handleSubmit}>
@@ -115,8 +135,30 @@ const AddTrip = ({ onTripAdded }) => {
               value={arrivalDate}
               onChange={(e) => setArrivalDate(e.target.value)}
               className="form-input"
-              placeholder="Date d'arrivée"
+              placeholder="Date d'arriv&eacute;e"
             />
+          </div>
+
+          {/* Upload photo */}
+          <div className="trip-photo-upload">
+            {photoPreview ? (
+              <div className="trip-photo-preview">
+                <img src={photoPreview} alt="Aper&ccedil;u" />
+                <button type="button" className="trip-photo-remove" onClick={removePhoto}>&times;</button>
+              </div>
+            ) : (
+              <label className="trip-photo-label">
+                <span className="trip-photo-icon">&#128247;</span>
+                <span>Ajouter une photo</span>
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePhotoChange}
+                  hidden
+                />
+              </label>
+            )}
           </div>
 
           <textarea

@@ -95,11 +95,27 @@ export const subscribeToProject = async (projectId, callback) => {
   })
 }
 
-// Ajouter une étape/trajet au projet
-export const addTrip = async (projectId, tripData) => {
+// Ajouter une étape/trajet au projet (avec photo optionnelle)
+export const addTrip = async (projectId, tripData, photoFile = null) => {
   if (!isFirebaseConfigured) return null
 
   const { collection, addDoc, serverTimestamp } = await import('firebase/firestore')
+
+  // Upload photo si fournie
+  let photoUrl = null
+  if (photoFile) {
+    const { ref, uploadBytesResumable, getDownloadURL } = await import('firebase/storage')
+    const { storage } = await import('./firebase')
+    const fileName = `trips/${projectId}/${Date.now()}_${photoFile.name}`
+    const storageRef = ref(storage, fileName)
+    const uploadTask = uploadBytesResumable(storageRef, photoFile)
+    await new Promise((resolve, reject) => {
+      uploadTask.on('state_changed', null, reject, async () => {
+        photoUrl = await getDownloadURL(uploadTask.snapshot.ref)
+        resolve()
+      })
+    })
+  }
 
   const trip = {
     city: tripData.city,
@@ -108,6 +124,7 @@ export const addTrip = async (projectId, tripData) => {
     longitude: tripData.longitude,
     arrivalDate: tripData.arrivalDate || null,
     notes: tripData.notes || '',
+    photoUrl,
     createdAt: serverTimestamp(),
   }
 
