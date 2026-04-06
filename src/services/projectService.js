@@ -95,34 +95,34 @@ export const subscribeToProject = async (projectId, callback) => {
   })
 }
 
+// Compresser et convertir en base64 (stocké directement dans Firestore, pas de Storage)
+const imageToBase64 = (file, maxSize = 400, quality = 0.5) => {
+  return new Promise((resolve) => {
+    if (!file || !file.type.startsWith('image/')) { resolve(null); return }
+    const img = new Image()
+    img.onload = () => {
+      let w = img.width, h = img.height
+      if (w > h && w > maxSize) { h = h * maxSize / w; w = maxSize }
+      else if (h > maxSize) { w = w * maxSize / h; h = maxSize }
+      const canvas = document.createElement('canvas')
+      canvas.width = w
+      canvas.height = h
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h)
+      resolve(canvas.toDataURL('image/jpeg', quality))
+    }
+    img.onerror = () => resolve(null)
+    img.src = URL.createObjectURL(file)
+  })
+}
+
 // Ajouter une étape/trajet au projet (avec photo optionnelle)
 export const addTrip = async (projectId, tripData, photoFile = null) => {
   if (!isFirebaseConfigured) return null
 
   const { collection, addDoc, serverTimestamp } = await import('firebase/firestore')
 
-  // Upload photo si fournie
-  let photoUrl = null
-  if (photoFile) {
-    try {
-      const { ref, uploadBytesResumable, getDownloadURL } = await import('firebase/storage')
-      const { storage } = await import('./firebase')
-      if (storage) {
-        const fileName = `trips/${projectId}/${Date.now()}_${photoFile.name}`
-        const storageRef = ref(storage, fileName)
-        const uploadTask = uploadBytesResumable(storageRef, photoFile)
-        await new Promise((resolve, reject) => {
-          uploadTask.on('state_changed', null, reject, async () => {
-            photoUrl = await getDownloadURL(uploadTask.snapshot.ref)
-            resolve()
-          })
-        })
-      }
-    } catch (err) {
-      console.error('Erreur upload photo trip:', err)
-      // On continue sans photo plutôt que bloquer
-    }
-  }
+  // Convertir photo en base64 miniature (pas de Firebase Storage)
+  const photoUrl = photoFile ? await imageToBase64(photoFile) : null
 
   const trip = {
     city: tripData.city,
@@ -180,16 +180,14 @@ export const createProjectPost = async (projectId, postData, mediaFiles = []) =>
 
   const { collection, addDoc, serverTimestamp } = await import('firebase/firestore')
 
-  // Upload des médias si présents
+  // Convertir les médias en base64 (pas de Firebase Storage)
   let mediaUrls = []
   if (mediaFiles.length > 0) {
-    try {
-      const { uploadMedia } = await import('./postService')
-      mediaUrls = await Promise.all(mediaFiles.map((f) => uploadMedia(f)))
-    } catch (err) {
-      console.error('Erreur upload médias:', err)
-      // On continue sans médias plutôt que bloquer
-    }
+    const results = await Promise.all(mediaFiles.map(async (f) => {
+      const b64 = await imageToBase64(f, 800, 0.6)
+      return b64 ? { url: b64, type: 'image', name: f.name } : null
+    }))
+    mediaUrls = results.filter(Boolean)
   }
 
   const post = {
