@@ -1,5 +1,5 @@
 // Profil voyageur — panneau latéral avec infos du projet
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useProject } from '../contexts/ProjectContext'
 import PhotoGallery from './PhotoGallery'
@@ -107,6 +107,49 @@ const TripReactions = ({ trip }) => {
   )
 }
 
+// Widget météo pour une position
+const WeatherWidget = ({ latitude, longitude, city }) => {
+  const [weather, setWeather] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!latitude || !longitude) { setLoading(false); return }
+    let cancelled = false
+    const fetchWeather = async () => {
+      try {
+        const { getWeather } = await import('../services/weatherService')
+        const data = await getWeather(latitude, longitude)
+        if (!cancelled) setWeather(data)
+      } catch {
+        // silently fail
+      }
+      if (!cancelled) setLoading(false)
+    }
+    fetchWeather()
+    return () => { cancelled = true }
+  }, [latitude, longitude])
+
+  if (loading) return <div className="weather-widget weather-loading">Chargement m&eacute;t&eacute;o...</div>
+  if (!weather) return null
+
+  return (
+    <div className="weather-widget">
+      <div className="weather-main">
+        <span className="weather-icon">{weather.icon}</span>
+        <span className="weather-temp">{weather.temperature}°C</span>
+      </div>
+      <div className="weather-details">
+        <span className="weather-label">{weather.label}</span>
+        <div className="weather-extra">
+          <span title="Humidit\u00e9">\uD83D\uDCA7 {weather.humidity}%</span>
+          <span title="Vent">\uD83C\uDF2C\uFE0F {weather.windSpeed} km/h</span>
+        </div>
+      </div>
+      {city && <span className="weather-city">{city}</span>}
+    </div>
+  )
+}
+
 const TravelerProfile = ({ travelerStatus, posts = [], trips = [] }) => {
   const { userData } = useAuth()
   const { project } = useProject()
@@ -166,6 +209,12 @@ const TravelerProfile = ({ travelerStatus, posts = [], trips = [] }) => {
               </span>
             )}
           </p>
+          {/* Météo actuelle */}
+          <WeatherWidget
+            latitude={lastTrip.latitude}
+            longitude={lastTrip.longitude}
+            city={lastTrip.city}
+          />
           {(lastTrip.photos?.length > 0 || lastTrip.photoUrl) ? (
             <PhotoGallery
               photos={lastTrip.photos?.length > 0 ? lastTrip.photos : [lastTrip.photoUrl]}

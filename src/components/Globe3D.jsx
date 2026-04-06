@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import * as THREE from 'three'
 import PhotoGallery from './PhotoGallery'
+import StageWeather from './StageWeather'
 
 const EARTH_TEXTURE = 'https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-blue-marble.jpg'
 
@@ -601,6 +602,9 @@ const Globe3D = ({ travelerStatus, posts = [], trips = [] }) => {
                 {activeStop.notes && (
                   <p className="stage-detail-notes">{activeStop.notes}</p>
                 )}
+
+                {/* Météo */}
+                <StageWeather latitude={activeStop.lat} longitude={activeStop.lng} />
 
                 {/* Réactions */}
                 {Object.keys(activeStop.reactions).length > 0 && (
