@@ -14,6 +14,7 @@ const AddTrip = ({ onTripAdded }) => {
   const [photo, setPhoto] = useState(null)
   const [photoPreview, setPhotoPreview] = useState(null)
   const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
   const fileRef = useRef(null)
 
   if (!isOwner) return null
@@ -48,6 +49,7 @@ const AddTrip = ({ onTripAdded }) => {
     e.preventDefault()
     if (!city.trim() || !lat || !lng || submitting) return
     setSubmitting(true)
+    setError('')
 
     try {
       const { addTrip } = await import('../services/projectService')
@@ -73,6 +75,7 @@ const AddTrip = ({ onTripAdded }) => {
       if (onTripAdded) onTripAdded()
     } catch (err) {
       console.error('Erreur ajout étape:', err)
+      setError('Erreur : ' + (err.code || err.message || 'inconnue'))
     }
     setSubmitting(false)
   }
@@ -168,6 +171,8 @@ const AddTrip = ({ onTripAdded }) => {
             className="create-post-textarea"
             rows={2}
           />
+
+          {error && <p className="auth-error">{error}</p>}
 
           <div className="create-post-actions">
             <button type="button" className="cancel-btn" onClick={() => setIsOpen(false)}>

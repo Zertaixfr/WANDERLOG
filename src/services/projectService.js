@@ -104,17 +104,24 @@ export const addTrip = async (projectId, tripData, photoFile = null) => {
   // Upload photo si fournie
   let photoUrl = null
   if (photoFile) {
-    const { ref, uploadBytesResumable, getDownloadURL } = await import('firebase/storage')
-    const { storage } = await import('./firebase')
-    const fileName = `trips/${projectId}/${Date.now()}_${photoFile.name}`
-    const storageRef = ref(storage, fileName)
-    const uploadTask = uploadBytesResumable(storageRef, photoFile)
-    await new Promise((resolve, reject) => {
-      uploadTask.on('state_changed', null, reject, async () => {
-        photoUrl = await getDownloadURL(uploadTask.snapshot.ref)
-        resolve()
-      })
-    })
+    try {
+      const { ref, uploadBytesResumable, getDownloadURL } = await import('firebase/storage')
+      const { storage } = await import('./firebase')
+      if (storage) {
+        const fileName = `trips/${projectId}/${Date.now()}_${photoFile.name}`
+        const storageRef = ref(storage, fileName)
+        const uploadTask = uploadBytesResumable(storageRef, photoFile)
+        await new Promise((resolve, reject) => {
+          uploadTask.on('state_changed', null, reject, async () => {
+            photoUrl = await getDownloadURL(uploadTask.snapshot.ref)
+            resolve()
+          })
+        })
+      }
+    } catch (err) {
+      console.error('Erreur upload photo trip:', err)
+      // On continue sans photo plutôt que bloquer
+    }
   }
 
   const trip = {
@@ -176,8 +183,13 @@ export const createProjectPost = async (projectId, postData, mediaFiles = []) =>
   // Upload des médias si présents
   let mediaUrls = []
   if (mediaFiles.length > 0) {
-    const { uploadMedia } = await import('./postService')
-    mediaUrls = await Promise.all(mediaFiles.map((f) => uploadMedia(f)))
+    try {
+      const { uploadMedia } = await import('./postService')
+      mediaUrls = await Promise.all(mediaFiles.map((f) => uploadMedia(f)))
+    } catch (err) {
+      console.error('Erreur upload médias:', err)
+      // On continue sans médias plutôt que bloquer
+    }
   }
 
   const post = {

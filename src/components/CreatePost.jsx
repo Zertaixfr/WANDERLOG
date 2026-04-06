@@ -14,6 +14,7 @@ const CreatePost = () => {
   const [files, setFiles] = useState([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
+  const [error, setError] = useState('')
   const fileInputRef = useRef(null)
 
   // Seul le propriétaire peut créer des posts
@@ -44,6 +45,7 @@ const CreatePost = () => {
     if (!text.trim() || isSubmitting) return
 
     setIsSubmitting(true)
+    setError('')
     try {
       const { createProjectPost } = await import('../services/projectService')
       await createProjectPost(project.id, {
@@ -66,6 +68,7 @@ const CreatePost = () => {
       setIsOpen(false)
     } catch (err) {
       console.error('Erreur lors de la création du post:', err)
+      setError('Erreur : ' + (err.code || err.message || 'inconnue'))
     } finally {
       setIsSubmitting(false)
     }
@@ -117,6 +120,8 @@ const CreatePost = () => {
               </div>
             )}
           </div>
+
+          {error && <p className="auth-error">{error}</p>}
 
           <div className="create-post-actions">
             <button type="button" className="cancel-btn" onClick={() => setIsOpen(false)}>Annuler</button>
