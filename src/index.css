@@ -232,6 +232,51 @@ body {
   box-shadow: 0 2px 12px rgba(212, 160, 68, 0.25);
 }
 
+/* Avatar upload (inscription) */
+.avatar-upload {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  margin: 0 auto 20px;
+  cursor: pointer;
+  overflow: hidden;
+  border: 2px dashed var(--border-warm);
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.avatar-upload:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 16px var(--accent-glow);
+}
+
+.avatar-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.avatar-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.25);
+  gap: 2px;
+}
+
+.avatar-icon {
+  font-size: 24px;
+  opacity: 0.6;
+}
+
+.avatar-text {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
 .form-group {
   margin-bottom: 16px;
 }
@@ -371,6 +416,14 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.user-avatar-img {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--accent);
 }
 
 .user-info {
@@ -1529,6 +1582,16 @@ body {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(212, 160, 68, 0.25);
+}
+
+.profile-avatar-img {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 2px solid var(--accent);
   box-shadow: 0 4px 12px rgba(212, 160, 68, 0.25);
 }
 

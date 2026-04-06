@@ -4,7 +4,7 @@ import { useProject } from '../contexts/ProjectContext'
 import { logoutUser } from '../services/authService'
 
 const Header = ({ activeTab, setActiveTab }) => {
-  const { user, isAdmin, demoMode } = useAuth()
+  const { user, userData, isAdmin, demoMode } = useAuth()
   const { project, isOwner, leaveProject } = useProject()
 
   const handleLogout = async () => {
@@ -43,9 +43,13 @@ const Header = ({ activeTab, setActiveTab }) => {
           </div>
         </div>
         <div className="header-user">
-          <div className="user-avatar-small">
-            {(user?.displayName || 'V')[0].toUpperCase()}
-          </div>
+          {userData?.photoBase64 ? (
+            <img src={userData.photoBase64} alt="" className="user-avatar-img" />
+          ) : (
+            <div className="user-avatar-small">
+              {(user?.displayName || 'V')[0].toUpperCase()}
+            </div>
+          )}
           <div className="user-info">
             <span className="user-name">
               {user?.displayName || 'Voyageur'}

@@ -8,22 +8,25 @@ import {
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { auth, db } from './firebase'
 
-// Email admin — seul compte autorisé à créer des posts
 const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL
 
-// Inscription d'un nouvel utilisateur
-export const registerUser = async (email, password, displayName) => {
+// Inscription avec prénom et photo de profil (base64)
+export const registerUser = async (email, password, displayName, avatarBase64 = null) => {
   const userCredential = await createUserWithEmailAndPassword(auth, email, password)
   const user = userCredential.user
 
-  // Mise à jour du profil avec le nom d'affichage
-  await updateProfile(user, { displayName })
+  // Mettre à jour le profil Firebase Auth
+  await updateProfile(user, {
+    displayName,
+    photoURL: avatarBase64 ? 'firestore' : null,
+  })
 
-  // Création du document utilisateur dans Firestore
+  // Sauvegarder dans Firestore (avec la photo en base64)
   await setDoc(doc(db, 'users', user.uid), {
     uid: user.uid,
     email: user.email,
     displayName,
+    photoBase64: avatarBase64 || null,
     isAdmin: email === ADMIN_EMAIL,
     createdAt: serverTimestamp(),
   })
@@ -31,7 +34,7 @@ export const registerUser = async (email, password, displayName) => {
   return user
 }
 
-// Connexion d'un utilisateur existant
+// Connexion
 export const loginUser = async (email, password) => {
   const userCredential = await signInWithEmailAndPassword(auth, email, password)
   return userCredential.user
@@ -42,7 +45,7 @@ export const logoutUser = async () => {
   await signOut(auth)
 }
 
-// Vérifier si l'utilisateur est admin
+// Vérifier si admin
 export const isAdmin = (user) => {
   return user?.email === ADMIN_EMAIL
 }

@@ -1,4 +1,5 @@
 // Profil voyageur — panneau latéral avec infos du projet
+import { useAuth } from '../contexts/AuthContext'
 import { useProject } from '../contexts/ProjectContext'
 
 // Distance haversine
@@ -11,6 +12,7 @@ const haversineKm = (lat1, lng1, lat2, lng2) => {
 }
 
 const TravelerProfile = ({ travelerStatus, posts = [], trips = [] }) => {
+  const { userData } = useAuth()
   const { project } = useProject()
 
   const validTrips = trips.filter(t => t.latitude && t.longitude)
@@ -37,9 +39,13 @@ const TravelerProfile = ({ travelerStatus, posts = [], trips = [] }) => {
     <div className="traveler-profile">
       {/* En-tête profil */}
       <div className="profile-header">
-        <div className="profile-avatar">
-          {(project?.travelerName || 'V')[0].toUpperCase()}
-        </div>
+        {userData?.photoBase64 ? (
+          <img src={userData.photoBase64} alt="" className="profile-avatar-img" />
+        ) : (
+          <div className="profile-avatar">
+            {(project?.travelerName || 'V')[0].toUpperCase()}
+          </div>
+        )}
         <div className="profile-info">
           <h2 className="profile-name">{project?.travelerName || 'Voyageur'}</h2>
           <p className="profile-bio">
