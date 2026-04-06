@@ -394,10 +394,7 @@ const Globe3D = ({ travelerStatus, posts = [], trips = [] }) => {
       time += 0.01
 
       // Rotation auto douce
-      if (autoRotate) {
-        globe.rotation.y += 0.0008
-        syncRotation()
-      } else if (!isDragging) {
+      if (!isDragging) {
         // Inertie après drag
         rotationVelocity.x *= 0.95
         rotationVelocity.y *= 0.95
