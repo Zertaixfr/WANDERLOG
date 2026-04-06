@@ -36,6 +36,7 @@ const ProjectScreen = () => {
         setExistingProjects(projects)
       } catch (err) {
         console.error('Erreur chargement projets:', err)
+        setError('Erreur chargement: ' + (err.code || err.message))
       }
       setLoading(false)
     }
@@ -59,10 +60,14 @@ const ProjectScreen = () => {
         },
         user.uid
       )
+      if (!project) {
+        setError('Erreur : Firebase non configuré ou retour null')
+        setSubmitting(false)
+        return
+      }
       setCreatedCode(project.code)
-      // On ne sélectionne pas encore — on montre le code d'abord
     } catch (err) {
-      setError('Erreur lors de la création du projet')
+      setError('Erreur : ' + (err.code || err.message || String(err)))
       console.error(err)
     }
     setSubmitting(false)
@@ -89,9 +94,15 @@ const ProjectScreen = () => {
     try {
       const { joinProject } = await import('../services/projectService')
       const project = await joinProject(joinCode.trim(), user.uid)
+      if (!project) {
+        setError('Erreur : Firebase non configuré ou retour null')
+        setSubmitting(false)
+        return
+      }
       selectProject(project)
     } catch (err) {
-      setError(err.message || 'Code invalide')
+      setError('Erreur : ' + (err.code || err.message || String(err)))
+      console.error(err)
     }
     setSubmitting(false)
   }
@@ -123,6 +134,9 @@ const ProjectScreen = () => {
           <h1 className="project-title">Wanderlog</h1>
           <p className="project-subtitle">Cr&eacute;ez ou rejoignez un carnet de voyage</p>
         </div>
+
+        {/* Erreur globale */}
+        {error && !mode && <p className="auth-error" style={{ marginBottom: 16 }}>{error}</p>}
 
         {/* Projets existants */}
         {existingProjects.length > 0 && !mode && (
