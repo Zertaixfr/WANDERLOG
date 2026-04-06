@@ -5,24 +5,24 @@
 
 /* --- Variables globales --- */
 :root {
-  --bg-primary: #0c0e12;
-  --bg-secondary: #12151a;
-  --bg-card: #171b22;
-  --bg-warm: #1a1611;
-  --border-subtle: rgba(210, 170, 110, 0.08);
-  --border-warm: rgba(210, 170, 110, 0.15);
-  --border-light: rgba(255, 255, 255, 0.08);
-  --text-primary: #ede6db;
-  --text-secondary: #a69882;
-  --text-muted: #6d6050;
+  --bg-primary: #1c1e24;
+  --bg-secondary: #22252c;
+  --bg-card: #292d36;
+  --bg-warm: #2a2620;
+  --border-subtle: rgba(210, 170, 110, 0.12);
+  --border-warm: rgba(210, 170, 110, 0.2);
+  --border-light: rgba(255, 255, 255, 0.1);
+  --text-primary: #f2ece3;
+  --text-secondary: #bfb099;
+  --text-muted: #8a7d6d;
   --accent: #d4a044;
   --accent-hover: #e8b85c;
   --accent-deep: #b8862e;
-  --accent-glow: rgba(212, 160, 68, 0.12);
-  --accent-warm: rgba(212, 160, 68, 0.06);
+  --accent-glow: rgba(212, 160, 68, 0.15);
+  --accent-warm: rgba(212, 160, 68, 0.08);
   --success: #5cb87a;
   --danger: #d45d5d;
-  --glass: rgba(255, 255, 255, 0.02);
+  --glass: rgba(255, 255, 255, 0.04);
 
   --font-heading: 'Playfair Display', Georgia, 'Times New Roman', serif;
   --font-body: 'DM Sans', system-ui, -apple-system, sans-serif;
@@ -32,9 +32,9 @@
   --radius-lg: 18px;
   --radius-xl: 24px;
 
-  --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.35);
-  --shadow-warm: 0 4px 20px rgba(212, 160, 68, 0.06);
-  --shadow-glow: 0 0 30px rgba(212, 160, 68, 0.08);
+  --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.25);
+  --shadow-warm: 0 4px 20px rgba(212, 160, 68, 0.08);
+  --shadow-glow: 0 0 30px rgba(212, 160, 68, 0.1);
 }
 
 /* --- Reset & Base --- */
