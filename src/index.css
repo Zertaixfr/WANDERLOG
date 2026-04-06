@@ -1037,14 +1037,44 @@ body {
 
 .comment {
   display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  align-items: baseline;
+  gap: 10px;
+  align-items: flex-start;
   padding: 10px 0;
 }
 
 .comment + .comment {
   border-top: 1px solid var(--border-subtle);
+}
+
+.comment-avatar-img {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1.5px solid var(--accent);
+  flex-shrink: 0;
+}
+
+.comment-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+  color: #0c0e12;
+  font-weight: 700;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.comment-body {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: baseline;
+  min-width: 0;
 }
 
 .comment-author {

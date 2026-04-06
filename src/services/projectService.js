@@ -267,6 +267,7 @@ export const addProjectComment = async (projectId, postId, comment) => {
       text: comment.text,
       userId: comment.userId,
       userName: comment.userName,
+      userPhoto: comment.userPhoto || null,
       createdAt: serverTimestamp(),
     }
   )

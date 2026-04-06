@@ -7,10 +7,18 @@ import { DEMO_COMMENTS } from '../services/demoData'
 // Composant commentaire
 const Comment = ({ comment }) => {
   const date = comment.createdAt?.toDate?.()
+  const initial = (comment.userName || 'V')[0].toUpperCase()
   return (
     <div className="comment">
-      <span className="comment-author">{comment.userName}</span>
-      <span className="comment-text">{comment.text}</span>
+      {comment.userPhoto ? (
+        <img src={comment.userPhoto} alt="" className="comment-avatar-img" />
+      ) : (
+        <div className="comment-avatar">{initial}</div>
+      )}
+      <div className="comment-body">
+        <span className="comment-author">{comment.userName}</span>
+        <span className="comment-text">{comment.text}</span>
+      </div>
       {date && (
         <span className="comment-date">{date.toLocaleDateString('fr-FR')}</span>
       )}
@@ -20,7 +28,7 @@ const Comment = ({ comment }) => {
 
 // Composant post
 const PostCard = ({ post, demoMode }) => {
-  const { user } = useAuth()
+  const { user, userData } = useAuth()
   const { project } = useProject()
   const [showComments, setShowComments] = useState(false)
   const [comments, setComments] = useState([])
@@ -74,6 +82,7 @@ const PostCard = ({ post, demoMode }) => {
         text: newComment.trim(),
         userName: user.displayName || 'Voyageur',
         userId: user.uid,
+        userPhoto: userData?.photoBase64 || null,
         createdAt: { toDate: () => new Date() },
       }])
       setNewComment('')
@@ -87,6 +96,7 @@ const PostCard = ({ post, demoMode }) => {
         text: newComment.trim(),
         userId: user.uid,
         userName: user.displayName || 'Anonyme',
+        userPhoto: userData?.photoBase64 || null,
       })
       setNewComment('')
     } catch (err) {
