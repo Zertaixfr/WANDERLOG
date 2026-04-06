@@ -1,6 +1,7 @@
 // Globe 3D interactif — photos aux arrêts, avion animé entre étapes
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import * as THREE from 'three'
+import PhotoGallery from './PhotoGallery'
 
 const EARTH_TEXTURE = 'https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-blue-marble.jpg'
 
@@ -139,11 +140,17 @@ const Globe3D = ({ travelerStatus, posts = [], trips = [] }) => {
   const stops = trips
     .filter((t) => t.latitude && t.longitude)
     .map((t) => ({
+      id: t.id,
       name: t.city || 'Inconnu',
       lat: t.latitude,
       lng: t.longitude,
       country: t.country || '',
       photoUrl: t.photoUrl || null,
+      photos: t.photos || [],
+      transport: t.transport || null,
+      notes: t.notes || '',
+      arrivalDate: t.arrivalDate || null,
+      reactions: t.reactions || {},
     }))
 
   // Distance totale
@@ -250,7 +257,7 @@ const Globe3D = ({ travelerStatus, posts = [], trips = [] }) => {
         new THREE.MeshBasicMaterial({ color: isLast ? 0xe8b85c : 0xd4a044 })
       )
       dot.position.copy(pos)
-      dot.userData = { name: stop.name, country: stop.country }
+      dot.userData = { stopIndex: index }
       markersGroup.add(dot)
 
       // Glow
@@ -275,7 +282,7 @@ const Globe3D = ({ travelerStatus, posts = [], trips = [] }) => {
           if (!sprite) return
           sprite.position.copy(photoPos)
           sprite.scale.set(0.1, 0.1, 1)
-          sprite.userData = { name: stop.name, country: stop.country }
+          sprite.userData = { stopIndex: index }
           markersGroup.add(sprite)
         })
       } else {
@@ -302,7 +309,7 @@ const Globe3D = ({ travelerStatus, posts = [], trips = [] }) => {
         const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true }))
         sprite.position.copy(photoPos)
         sprite.scale.set(0.12, 0.045, 1)
-        sprite.userData = { name: stop.name, country: stop.country }
+        sprite.userData = { stopIndex: index }
         markersGroup.add(sprite)
       }
     })
@@ -404,23 +411,38 @@ const Globe3D = ({ travelerStatus, posts = [], trips = [] }) => {
     renderer.domElement.addEventListener('touchmove', onTouchMoveZoom)
     renderer.domElement.addEventListener('touchend', onUp)
 
-    // Raycaster
+    // Raycaster — clic pour ouvrir la fiche détaillée
     const raycaster = new THREE.Raycaster()
     const mouse = new THREE.Vector2()
+    let clickStart = { x: 0, y: 0, time: 0 }
+    const onClickDown = (e) => {
+      clickStart = {
+        x: e.clientX ?? e.touches?.[0]?.clientX ?? 0,
+        y: e.clientY ?? e.touches?.[0]?.clientY ?? 0,
+        time: Date.now(),
+      }
+    }
     const onClick = (e) => {
+      // Ignorer les drags (distance > 5px ou durée > 300ms)
+      const cx = e.clientX ?? 0
+      const cy = e.clientY ?? 0
+      const dist = Math.sqrt((cx - clickStart.x) ** 2 + (cy - clickStart.y) ** 2)
+      if (dist > 5 || Date.now() - clickStart.time > 300) return
+
       const rect = renderer.domElement.getBoundingClientRect()
-      mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1
-      mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1
+      mouse.x = ((cx - rect.left) / rect.width) * 2 - 1
+      mouse.y = -((cy - rect.top) / rect.height) * 2 + 1
       raycaster.setFromCamera(mouse, camera)
       const intersects = raycaster.intersectObjects(markersGroup.children, true)
       for (const hit of intersects) {
-        if (hit.object.userData?.name) {
-          setSelectedStop(hit.object.userData)
-          setTimeout(() => setSelectedStop(null), 4000)
+        const idx = hit.object.userData?.stopIndex
+        if (idx !== undefined && idx !== null) {
+          setSelectedStop(idx)
           break
         }
       }
     }
+    renderer.domElement.addEventListener('mousedown', onClickDown)
     renderer.domElement.addEventListener('click', onClick)
 
     // --- Boucle animation ---
@@ -499,11 +521,26 @@ const Globe3D = ({ travelerStatus, posts = [], trips = [] }) => {
       renderer.domElement.removeEventListener('touchmove', onMove)
       renderer.domElement.removeEventListener('touchmove', onTouchMoveZoom)
       renderer.domElement.removeEventListener('touchend', onUp)
+      renderer.domElement.removeEventListener('mousedown', onClickDown)
       renderer.domElement.removeEventListener('click', onClick)
       renderer.dispose()
       container.removeChild(renderer.domElement)
     }
   }, [stops.length, trips.length, currentPosition?.lat, currentPosition?.lng])
+
+  const TRANSPORT_ICONS = {
+    plane: '\u2708\uFE0F', boat: '\u26F5', car: '\uD83D\uDE97', bus: '\uD83D\uDE8C',
+    train: '\uD83D\uDE84', bike: '\uD83D\uDEB2', walk: '\uD83D\uDEB6',
+    motorcycle: '\uD83C\uDFCD\uFE0F', hitchhike: '\uD83D\uDC4D', other: '\uD83D\uDEA9',
+  }
+  const TRANSPORT_LABELS = {
+    plane: 'Avion', boat: 'Bateau', car: 'Voiture', bus: 'Bus',
+    train: 'Train', bike: 'V\u00e9lo', walk: '\u00c0 pied',
+    motorcycle: 'Moto', hitchhike: 'Auto-stop', other: 'Autre',
+  }
+
+  const activeStop = selectedStop !== null ? stops[selectedStop] : null
+  const closeDetail = useCallback(() => setSelectedStop(null), [])
 
   return (
     <div className="globe-section">
@@ -522,14 +559,63 @@ const Globe3D = ({ travelerStatus, posts = [], trips = [] }) => {
         </div>
       </div>
       <div className="globe-container" ref={mountRef}>
-        {selectedStop && (
-          <div className="globe-tooltip">
-            <span className="tooltip-pin">&#128205;</span>
-            <div className="tooltip-text">
-              <span className="tooltip-name">{selectedStop.name}</span>
-              {selectedStop.country && (
-                <span className="tooltip-country">{selectedStop.country}</span>
+        {/* Fiche détaillée d'une étape */}
+        {activeStop && (
+          <div className="stage-detail-overlay" onClick={closeDetail}>
+            <div className="stage-detail-card" onClick={(e) => e.stopPropagation()}>
+              <button className="stage-detail-close" onClick={closeDetail}>&times;</button>
+
+              {/* Photos */}
+              {(activeStop.photos?.length > 0 || activeStop.photoUrl) && (
+                <div className="stage-detail-photos">
+                  <PhotoGallery
+                    photos={activeStop.photos?.length > 0 ? activeStop.photos : [activeStop.photoUrl]}
+                    city={activeStop.name}
+                  />
+                </div>
               )}
+
+              {/* Infos */}
+              <div className="stage-detail-info">
+                <h3 className="stage-detail-city">{activeStop.name}</h3>
+                {activeStop.country && (
+                  <p className="stage-detail-country">{activeStop.country}</p>
+                )}
+
+                <div className="stage-detail-meta">
+                  {activeStop.arrivalDate && (
+                    <span className="stage-detail-tag">
+                      &#128197; {new Date(activeStop.arrivalDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    </span>
+                  )}
+                  {activeStop.transport && (
+                    <span className="stage-detail-tag">
+                      {TRANSPORT_ICONS[activeStop.transport]} {TRANSPORT_LABELS[activeStop.transport]}
+                    </span>
+                  )}
+                  <span className="stage-detail-tag stage-detail-step">
+                    &Eacute;tape {selectedStop + 1}/{stops.length}
+                  </span>
+                </div>
+
+                {activeStop.notes && (
+                  <p className="stage-detail-notes">{activeStop.notes}</p>
+                )}
+
+                {/* Réactions */}
+                {Object.keys(activeStop.reactions).length > 0 && (
+                  <div className="stage-detail-reactions">
+                    {Object.entries(activeStop.reactions).map(([emoji, users]) => (
+                      users.length > 0 && (
+                        <span key={emoji} className="reaction-pill">
+                          <span>{emoji}</span>
+                          <span className="reaction-count">{users.length}</span>
+                        </span>
+                      )
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}

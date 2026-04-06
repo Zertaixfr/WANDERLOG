@@ -3216,3 +3216,144 @@ body {
   background: var(--accent-warm);
   transform: scale(1.25);
 }
+
+/* ============================================
+   FICHE DÉTAILLÉE ÉTAPE (Globe overlay)
+   ============================================ */
+
+.stage-detail-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  animation: stageOverlayIn 0.2s ease;
+  padding: 20px;
+}
+
+@keyframes stageOverlayIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.stage-detail-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-warm);
+  border-radius: var(--radius-md);
+  max-width: 380px;
+  width: 100%;
+  max-height: 80%;
+  overflow-y: auto;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
+  position: relative;
+  animation: stageCardIn 0.25s ease;
+}
+
+@keyframes stageCardIn {
+  from { opacity: 0; transform: translateY(16px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.stage-detail-close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.4);
+  border: none;
+  color: #fff;
+  font-size: 22px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  transition: background 0.2s;
+  line-height: 1;
+}
+
+.stage-detail-close:hover {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.stage-detail-photos {
+  padding: 12px 12px 0;
+}
+
+.stage-detail-info {
+  padding: 16px;
+}
+
+.stage-detail-city {
+  font-family: var(--font-heading);
+  font-size: 22px;
+  color: var(--text-primary);
+  margin: 0 0 4px;
+}
+
+.stage-detail-country {
+  font-size: 14px;
+  color: var(--accent);
+  margin: 0 0 12px;
+  font-weight: 500;
+}
+
+.stage-detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.stage-detail-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  padding: 4px 10px;
+  border-radius: 16px;
+  font-family: var(--font-body);
+}
+
+.stage-detail-step {
+  color: var(--accent);
+  border-color: var(--border-warm);
+  font-weight: 600;
+}
+
+.stage-detail-notes {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 0 0 12px;
+  font-style: italic;
+  padding: 10px 12px;
+  background: var(--accent-warm);
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--accent);
+}
+
+.stage-detail-reactions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+@media (max-width: 768px) {
+  .stage-detail-card {
+    max-width: 100%;
+    max-height: 85%;
+  }
+
+  .stage-detail-overlay {
+    padding: 10px;
+  }
+}
