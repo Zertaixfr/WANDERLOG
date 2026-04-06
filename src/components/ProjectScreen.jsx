@@ -31,18 +31,12 @@ const ProjectScreen = () => {
     }
     const load = async () => {
       try {
-        const { isFirebaseConfigured } = await import('../services/firebase')
-        if (!isFirebaseConfigured) {
-          setError('DEBUG: Firebase non configuré au chargement')
-          setLoading(false)
-          return
-        }
         const { getUserProjects } = await import('../services/projectService')
         const projects = await getUserProjects(user.uid)
         setExistingProjects(projects)
       } catch (err) {
         console.error('Erreur chargement projets:', err)
-        setError('DEBUG LOAD: [' + (err.code || 'no-code') + '] ' + (err.message || String(err)))
+        setError('Impossible de charger vos carnets')
       }
       setLoading(false)
     }
@@ -57,19 +51,6 @@ const ProjectScreen = () => {
     setSubmitting(true)
 
     try {
-      // Debug : vérifier Firebase
-      const { isFirebaseConfigured, db } = await import('../services/firebase')
-      if (!isFirebaseConfigured) {
-        setError('DEBUG: Firebase non configuré (isFirebaseConfigured=false). Vérifiez .env')
-        setSubmitting(false)
-        return
-      }
-      if (!db) {
-        setError('DEBUG: db est null. Firebase Firestore non initialisé.')
-        setSubmitting(false)
-        return
-      }
-
       const { createProject } = await import('../services/projectService')
       const project = await createProject(
         {
@@ -80,14 +61,14 @@ const ProjectScreen = () => {
         user.uid
       )
       if (!project) {
-        setError('DEBUG: createProject a retourné null. isFirebaseConfigured=' + isFirebaseConfigured)
+        setError('Erreur lors de la cr\u00e9ation')
         setSubmitting(false)
         return
       }
       setCreatedCode(project.code)
     } catch (err) {
-      setError('DEBUG ERREUR: [' + (err.code || 'no-code') + '] ' + (err.message || String(err)))
-      console.error('createProject error:', err)
+      setError(err.message || 'Erreur lors de la cr\u00e9ation du carnet')
+      console.error(err)
     }
     setSubmitting(false)
   }
@@ -111,23 +92,17 @@ const ProjectScreen = () => {
     setSubmitting(true)
 
     try {
-      const { isFirebaseConfigured, db } = await import('../services/firebase')
-      if (!isFirebaseConfigured || !db) {
-        setError('DEBUG: Firebase non configuré ou db null')
-        setSubmitting(false)
-        return
-      }
       const { joinProject } = await import('../services/projectService')
       const project = await joinProject(joinCode.trim(), user.uid)
       if (!project) {
-        setError('DEBUG: joinProject a retourné null')
+        setError('Code invalide ou erreur')
         setSubmitting(false)
         return
       }
       selectProject(project)
     } catch (err) {
-      setError('DEBUG ERREUR: [' + (err.code || 'no-code') + '] ' + (err.message || String(err)))
-      console.error('joinProject error:', err)
+      setError(err.message || 'Code invalide')
+      console.error(err)
     }
     setSubmitting(false)
   }
@@ -160,8 +135,8 @@ const ProjectScreen = () => {
           <p className="project-subtitle">Cr&eacute;ez ou rejoignez un carnet de voyage</p>
         </div>
 
-        {/* Erreur globale */}
-        {error && !mode && <p className="auth-error" style={{ marginBottom: 16 }}>{error}</p>}
+        {/* Erreur */}
+        {error && !mode && !createdCode && <p className="auth-error" style={{ marginBottom: 16 }}>{error}</p>}
 
         {/* Projets existants */}
         {existingProjects.length > 0 && !mode && (

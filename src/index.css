@@ -1400,6 +1400,59 @@ body {
   font-style: italic;
 }
 
+/* Timeline trajet dans stats */
+.trip-timeline-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.trip-timeline-item:last-child {
+  border-bottom: none;
+}
+
+.trip-timeline-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(212, 160, 68, 0.15);
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.trip-timeline-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.trip-timeline-city {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.trip-timeline-date {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.trip-timeline-dist {
+  font-size: 12px;
+  color: var(--accent);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
 /* ============================================
    FOOTER
    ============================================ */
@@ -1569,6 +1622,15 @@ body {
   font-style: italic;
   margin-bottom: 8px;
   line-height: 1.5;
+}
+
+.status-photo {
+  width: 100%;
+  max-height: 140px;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  margin-top: 10px;
+  border: 1px solid var(--border-subtle);
 }
 
 .status-weather {

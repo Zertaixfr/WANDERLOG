@@ -130,7 +130,7 @@ function App() {
               <Globe3D travelerStatus={travelerStatus} posts={posts} trips={trips} />
             </div>
             <aside className="sidebar-panel">
-              <TravelerProfile travelerStatus={travelerStatus} posts={posts} />
+              <TravelerProfile travelerStatus={travelerStatus} posts={posts} trips={trips} />
               {isOwner && <AddTrip onTripAdded={() => {}} />}
             </aside>
           </div>
@@ -146,7 +146,7 @@ function App() {
 
         {/* Vue Stats */}
         {activeTab === 'stats' && (
-          <Stats demoMode={demoMode} demoStatus={travelerStatus} />
+          <Stats trips={trips} posts={posts} />
         )}
       </main>
 
