@@ -163,31 +163,35 @@ const Globe3D = ({ travelerStatus, posts = [], trips = [] }) => {
     renderer.setSize(width, height)
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     renderer.toneMapping = THREE.ACESFilmicToneMapping
-    renderer.toneMappingExposure = 1.1
+    renderer.toneMappingExposure = 1.5
     container.appendChild(renderer.domElement)
 
     const globeRadius = 1.5
     const textureLoader = new THREE.TextureLoader()
     textureLoader.crossOrigin = 'anonymous'
 
-    // Éclairage doux — ambiance chaleureuse
-    const ambientLight = new THREE.AmbientLight(0xffeedd, 0.6)
+    // Éclairage lumineux — bien voir tous les continents
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1.4)
     scene.add(ambientLight)
 
-    const sunLight = new THREE.DirectionalLight(0xfff4e0, 1.2)
+    const sunLight = new THREE.DirectionalLight(0xfff8ee, 1.0)
     sunLight.position.set(5, 3, 5)
     scene.add(sunLight)
 
-    const rimLight = new THREE.DirectionalLight(0xd4a044, 0.3)
-    rimLight.position.set(-3, -1, -3)
-    scene.add(rimLight)
+    const fillLight = new THREE.DirectionalLight(0xfff8ee, 0.6)
+    fillLight.position.set(-4, 2, -3)
+    scene.add(fillLight)
+
+    const backLight = new THREE.DirectionalLight(0xd4a044, 0.3)
+    backLight.position.set(0, -3, -5)
+    scene.add(backLight)
 
     // Globe terrestre — avec relief et teinte chaude
     const globeGeometry = new THREE.SphereGeometry(globeRadius, 96, 96)
     const globeMaterial = new THREE.MeshStandardMaterial({
-      color: 0xccb888,
-      roughness: 0.85,
-      metalness: 0.05,
+      color: 0xeeddcc,
+      roughness: 0.7,
+      metalness: 0.0,
     })
     const globe = new THREE.Mesh(globeGeometry, globeMaterial)
     scene.add(globe)
