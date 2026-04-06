@@ -154,9 +154,9 @@ const Globe3D = ({ travelerStatus, posts = [], trips = [] }) => {
     }))
     scene.add(stars)
 
-    // Caméra
+    // Caméra — reculée pour voir le globe en entier
     const camera = new THREE.PerspectiveCamera(42, width / height, 0.1, 1000)
-    camera.position.z = 3.6
+    camera.position.z = 4.8
 
     // Renderer
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
