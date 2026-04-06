@@ -11,6 +11,7 @@ import Stats from './components/Stats'
 import CreatePost from './components/CreatePost'
 import AddTrip from './components/AddTrip'
 import TravelerProfile from './components/TravelerProfile'
+import Settings from './components/Settings'
 import { DEMO_POSTS, DEMO_TRAVELER_STATUS } from './services/demoData'
 
 function App() {
@@ -156,6 +157,11 @@ function App() {
         {/* Vue Stats */}
         {activeTab === 'stats' && (
           <Stats trips={trips} posts={posts} />
+        )}
+
+        {/* Vue Paramètres */}
+        {activeTab === 'settings' && (
+          <Settings />
         )}
       </main>
 
