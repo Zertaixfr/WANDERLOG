@@ -17,10 +17,10 @@ const latLngToVector3 = (lat, lng, radius) => {
   )
 }
 
-// Arc courbé entre deux points
+// Arc courbé entre deux points (hauteur réduite pour rester proche du globe)
 const createArcPoints = (start, end, radius, segments = 100) => {
   const points = []
-  const arcHeight = start.distanceTo(end) * 0.35
+  const arcHeight = start.distanceTo(end) * 0.1
   for (let i = 0; i <= segments; i++) {
     const t = i / segments
     const point = new THREE.Vector3().lerpVectors(start, end, t)
@@ -85,43 +85,37 @@ const createPhotoSprite = (imageUrl, size = 128) => {
   })
 }
 
-// Créer un petit avion en géométrie (triangle + ailes)
-const createPlane = () => {
-  const group = new THREE.Group()
+// Emojis pour chaque mode de transport
+const TRANSPORT_EMOJI = {
+  plane: '\u2708\uFE0F',
+  boat: '\u26F5',
+  car: '\uD83D\uDE97',
+  bus: '\uD83D\uDE8C',
+  train: '\uD83D\uDE84',
+  bike: '\uD83D\uDEB2',
+  walk: '\uD83D\uDEB6',
+  motorcycle: '\uD83C\uDFCD\uFE0F',
+  hitchhike: '\uD83D\uDC4D',
+  other: '\uD83D\uDEA9',
+}
 
-  // Corps (cône allongé)
-  const body = new THREE.Mesh(
-    new THREE.ConeGeometry(0.012, 0.05, 4),
-    new THREE.MeshBasicMaterial({ color: 0xffffff })
+// Créer un sprite emoji pour le transport animé
+const createTransportSprite = (emoji) => {
+  const size = 64
+  const canvas = document.createElement('canvas')
+  canvas.width = size
+  canvas.height = size
+  const ctx = canvas.getContext('2d')
+  ctx.font = '42px serif'
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText(emoji, size / 2, size / 2)
+  const texture = new THREE.CanvasTexture(canvas)
+  const sprite = new THREE.Sprite(
+    new THREE.SpriteMaterial({ map: texture, transparent: true })
   )
-  body.rotation.x = Math.PI / 2
-  group.add(body)
-
-  // Ailes
-  const wingShape = new THREE.Shape()
-  wingShape.moveTo(0, 0)
-  wingShape.lineTo(-0.035, -0.012)
-  wingShape.lineTo(0, 0.008)
-  wingShape.lineTo(0.035, -0.012)
-  wingShape.closePath()
-  const wings = new THREE.Mesh(
-    new THREE.ShapeGeometry(wingShape),
-    new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide })
-  )
-  wings.rotation.x = Math.PI / 2
-  wings.position.z = 0.005
-  group.add(wings)
-
-  // Traînée lumineuse
-  const trail = new THREE.Mesh(
-    new THREE.ConeGeometry(0.006, 0.06, 4),
-    new THREE.MeshBasicMaterial({ color: 0xd4a044, transparent: true, opacity: 0.4 })
-  )
-  trail.rotation.x = -Math.PI / 2
-  trail.position.z = 0.04
-  group.add(trail)
-
-  return group
+  sprite.scale.set(0.07, 0.07, 1)
+  return sprite
 }
 
 // Calculer la distance en km entre 2 points lat/lng
@@ -229,18 +223,21 @@ const Globe3D = ({ travelerStatus, posts = [], trips = [] }) => {
     const markersGroup = new THREE.Group()
     scene.add(markersGroup)
 
-    // --- ARCS en pointillés dorés ---
-    const allArcPoints = [] // pour l'avion
+    // --- ARCS en pointillés dorés + transport par segment ---
+    const allArcPoints = []
+    const allArcTransports = []
     for (let i = 0; i < stops.length - 1; i++) {
       const start = latLngToVector3(stops[i].lat, stops[i].lng, globeRadius + 0.01)
       const end = latLngToVector3(stops[i + 1].lat, stops[i + 1].lng, globeRadius + 0.01)
       const pts = createArcPoints(start, end, globeRadius, 100)
       allArcPoints.push(pts)
+      // Le transport de l'étape d'arrivée (stops[i+1]) définit comment on s'y est rendu
+      allArcTransports.push(stops[i + 1].transport || 'plane')
 
       // Arc pointillé doré
       const geo = new THREE.BufferGeometry().setFromPoints(pts)
       const mat = new THREE.LineDashedMaterial({
-        color: 0xd4a044, dashSize: 0.04, gapSize: 0.02, transparent: true, opacity: 0.7,
+        color: 0xd4a044, dashSize: 0.04, gapSize: 0.02, transparent: true, opacity: 0.6,
       })
       const line = new THREE.Line(geo, mat)
       line.computeLineDistances()
@@ -315,13 +312,15 @@ const Globe3D = ({ travelerStatus, posts = [], trips = [] }) => {
       }
     })
 
-    // --- AVION ANIMÉ le long des arcs ---
-    let plane = null
-    let planeProgress = 0
-    let planeArcIndex = 0
+    // --- EMOJI TRANSPORT ANIMÉ le long des arcs ---
+    let transportSprite = null
+    let transportProgress = 0
+    let transportArcIndex = 0
     if (allArcPoints.length > 0) {
-      plane = createPlane()
-      markersGroup.add(plane)
+      const firstEmoji = TRANSPORT_EMOJI[allArcTransports[0]] || '\u2708\uFE0F'
+      transportSprite = createTransportSprite(firstEmoji)
+      transportSprite._currentTransport = allArcTransports[0]
+      markersGroup.add(transportSprite)
     }
 
     // --- Position actuelle pulse ---
@@ -463,31 +462,27 @@ const Globe3D = ({ travelerStatus, posts = [], trips = [] }) => {
         }
       }
 
-      // Avion animé
-      if (plane && allArcPoints.length > 0) {
-        planeProgress += 0.003
-        if (planeProgress >= 1) {
-          planeProgress = 0
-          planeArcIndex = (planeArcIndex + 1) % allArcPoints.length
+      // Emoji transport animé
+      if (transportSprite && allArcPoints.length > 0) {
+        transportProgress += 0.003
+        if (transportProgress >= 1) {
+          transportProgress = 0
+          transportArcIndex = (transportArcIndex + 1) % allArcPoints.length
+          // Changer l'emoji si le transport change
+          const newTransport = allArcTransports[transportArcIndex]
+          if (newTransport !== transportSprite._currentTransport) {
+            markersGroup.remove(transportSprite)
+            transportSprite = createTransportSprite(TRANSPORT_EMOJI[newTransport] || '\u2708\uFE0F')
+            transportSprite._currentTransport = newTransport
+            markersGroup.add(transportSprite)
+          }
         }
-        const arc = allArcPoints[planeArcIndex]
-        const idx = Math.floor(planeProgress * (arc.length - 2))
+        const arc = allArcPoints[transportArcIndex]
+        const idx = Math.floor(transportProgress * (arc.length - 2))
         const nextIdx = Math.min(idx + 1, arc.length - 1)
-        const lerpT = (planeProgress * (arc.length - 2)) - idx
+        const lerpT = (transportProgress * (arc.length - 2)) - idx
         const pos = new THREE.Vector3().lerpVectors(arc[idx], arc[nextIdx], lerpT)
-        plane.position.copy(pos)
-
-        // Orienter l'avion dans la direction du vol
-        if (nextIdx < arc.length - 1) {
-          const forward = arc[nextIdx + 1] || arc[nextIdx]
-          const dir = new THREE.Vector3().subVectors(forward, pos).normalize()
-          const up = pos.clone().normalize()
-          const mat4 = new THREE.Matrix4()
-          const right = new THREE.Vector3().crossVectors(dir, up).normalize()
-          const correctedUp = new THREE.Vector3().crossVectors(right, dir).normalize()
-          mat4.makeBasis(right, correctedUp, dir.negate())
-          plane.setRotationFromMatrix(mat4)
-        }
+        transportSprite.position.copy(pos)
       }
 
       // Pulse position actuelle
@@ -637,7 +632,9 @@ const Globe3D = ({ travelerStatus, posts = [], trips = [] }) => {
                 </div>
                 {i < stops.length - 1 && (
                   <div className="legend-connector">
-                    <span className="legend-plane-icon">&#9992;</span>
+                    <span className="legend-plane-icon">
+                      {stops[i + 1].transport ? (TRANSPORT_ICONS[stops[i + 1].transport] || '\u2708\uFE0F') : '\u2708\uFE0F'}
+                    </span>
                   </div>
                 )}
               </div>
