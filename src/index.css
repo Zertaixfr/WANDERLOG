@@ -4665,3 +4665,91 @@ body {
     padding-left: 0;
   }
 }
+
+/* ============================================
+   RÉCAP ANIMÉ (Replay fly-over)
+   ============================================ */
+
+.replay-btn {
+  padding: 8px 16px;
+  background: linear-gradient(135deg, var(--accent2), #2aa88e);
+  border: none;
+  border-radius: 20px;
+  color: #0c0e12;
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition-smooth);
+  white-space: nowrap;
+}
+
+.replay-btn:hover:not(:disabled) {
+  box-shadow: 0 4px 16px rgba(62, 207, 178, 0.35);
+  transform: translateY(-1px);
+}
+
+.replay-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.replay-overlay {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 80;
+  pointer-events: none;
+  animation: replayFadeIn 0.5s ease;
+}
+
+@keyframes replayFadeIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.replay-card {
+  background: rgba(18, 20, 26, 0.85);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--border-warm);
+  border-radius: var(--radius-md);
+  padding: 14px 24px;
+  text-align: center;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  min-width: 180px;
+}
+
+.replay-stage-num {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent2);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.replay-city {
+  font-family: var(--font-heading);
+  font-size: 22px;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.replay-country {
+  font-size: 13px;
+  color: var(--accent);
+  margin: 2px 0 6px;
+}
+
+.replay-transport {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-right: 8px;
+}
+
+.replay-date {
+  font-size: 12px;
+  color: var(--text-muted);
+}

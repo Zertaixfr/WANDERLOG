@@ -130,6 +130,10 @@ const haversineKm = (lat1, lng1, lat2, lng2) => {
 const Globe3D = ({ travelerStatus, posts = [], trips = [] }) => {
   const mountRef = useRef(null)
   const [selectedStop, setSelectedStop] = useState(null)
+  const [isReplaying, setIsReplaying] = useState(false)
+  const [replayStage, setReplayStage] = useState(-1)
+  const globeRef = useRef(null)
+  const cameraRef = useRef(null)
 
   // Stops = uniquement les trips (arrêts du voyageur)
   const stops = trips
@@ -201,6 +205,8 @@ const Globe3D = ({ travelerStatus, posts = [], trips = [] }) => {
     const globeMat = new THREE.MeshBasicMaterial({ color: 0x2a5a8a })
     const globe = new THREE.Mesh(globeGeo, globeMat)
     scene.add(globe)
+    globeRef.current = globe
+    cameraRef.current = camera
 
     textureLoader.load(EARTH_TEXTURE, (texture) => {
       texture.colorSpace = THREE.SRGBColorSpace
@@ -538,6 +544,68 @@ const Globe3D = ({ travelerStatus, posts = [], trips = [] }) => {
   const activeStop = selectedStop !== null ? stops[selectedStop] : null
   const closeDetail = useCallback(() => setSelectedStop(null), [])
 
+  // Récap animé — fly-over d'étape en étape
+  const startReplay = useCallback(() => {
+    if (stops.length < 2 || isReplaying) return
+    setIsReplaying(true)
+    setSelectedStop(null)
+    setReplayStage(0)
+
+    let stageIdx = 0
+    const globe = globeRef.current
+    const camera = cameraRef.current
+    if (!globe || !camera) { setIsReplaying(false); return }
+
+    // Zoom initial
+    camera.position.z = 3.5
+
+    const goToStage = (idx) => {
+      const stop = stops[idx]
+      // Calculer la rotation pour centrer sur cette étape
+      const targetRotY = -(stop.lng + 180) * (Math.PI / 180) + Math.PI
+      const targetRotX = stop.lat * (Math.PI / 180)
+
+      // Animation smooth vers la position
+      const startRotX = globe.rotation.x
+      const startRotY = globe.rotation.y
+      const duration = 1500
+      const startTime = Date.now()
+
+      const animateToStage = () => {
+        const elapsed = Date.now() - startTime
+        const t = Math.min(elapsed / duration, 1)
+        // Ease in-out cubic
+        const ease = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
+
+        globe.rotation.x = startRotX + (targetRotX - startRotX) * ease
+        globe.rotation.y = startRotY + (targetRotY - startRotY) * ease
+
+        // Sync markers
+        const markersGroup = globe.parent?.children.find(c => c.type === 'Group')
+        if (markersGroup) markersGroup.rotation.copy(globe.rotation)
+
+        if (t < 1) {
+          requestAnimationFrame(animateToStage)
+        } else {
+          setReplayStage(idx)
+          // Attendre puis passer à l'étape suivante
+          if (idx < stops.length - 1) {
+            setTimeout(() => goToStage(idx + 1), 2000)
+          } else {
+            // Fin du replay
+            setTimeout(() => {
+              setIsReplaying(false)
+              setReplayStage(-1)
+            }, 2500)
+          }
+        }
+      }
+      animateToStage()
+    }
+
+    goToStage(0)
+  }, [stops, isReplaying])
+
   return (
     <div className="globe-section">
       <div className="globe-header">
@@ -552,11 +620,37 @@ const Globe3D = ({ travelerStatus, posts = [], trips = [] }) => {
           {stops.length > 1 && (
             <span className="globe-stat">{new Set(stops.map(s => s.country).filter(Boolean)).size} pays</span>
           )}
+          {stops.length >= 2 && (
+            <button className="replay-btn" onClick={startReplay} disabled={isReplaying}>
+              {isReplaying ? 'En cours...' : '\u25B6 Revoir le voyage'}
+            </button>
+          )}
         </div>
       </div>
       <div className="globe-container" ref={mountRef}>
+        {/* Overlay récap animé */}
+        {isReplaying && replayStage >= 0 && stops[replayStage] && (
+          <div className="replay-overlay">
+            <div className="replay-card">
+              <span className="replay-stage-num">{replayStage + 1}/{stops.length}</span>
+              <h3 className="replay-city">{stops[replayStage].name}</h3>
+              {stops[replayStage].country && <p className="replay-country">{stops[replayStage].country}</p>}
+              {stops[replayStage].transport && (
+                <span className="replay-transport">
+                  {TRANSPORT_ICONS[stops[replayStage].transport]} {TRANSPORT_LABELS[stops[replayStage].transport]}
+                </span>
+              )}
+              {stops[replayStage].arrivalDate && (
+                <span className="replay-date">
+                  {new Date(stops[replayStage].arrivalDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Fiche détaillée d'une étape */}
-        {activeStop && (
+        {!isReplaying && activeStop && (
           <div className="stage-detail-overlay" onClick={closeDetail}>
             <div className="stage-detail-card" onClick={(e) => e.stopPropagation()}>
               <button className="stage-detail-close" onClick={closeDetail}>&times;</button>
