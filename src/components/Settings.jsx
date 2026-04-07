@@ -2,6 +2,7 @@
 import { useState, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useProject } from '../contexts/ProjectContext'
+import { useTheme } from '../contexts/ThemeContext'
 
 // Compresser avatar
 const compressAvatar = (file) => {
@@ -26,6 +27,7 @@ const compressAvatar = (file) => {
 const Settings = () => {
   const { user, userData, demoMode } = useAuth()
   const { project, isOwner, leaveProject } = useProject()
+  const { isDark, toggleTheme } = useTheme()
 
   // Profil
   const [editName, setEditName] = useState(user?.displayName || '')
@@ -49,9 +51,6 @@ const Settings = () => {
   const [projectSaving, setProjectSaving] = useState(false)
   const [projectMsg, setProjectMsg] = useState('')
   const [codeMsg, setCodeMsg] = useState('')
-
-  // Thème
-  const [darkMode, setDarkMode] = useState(true)
 
   // --- Handlers ---
 
@@ -189,6 +188,23 @@ const Settings = () => {
   return (
     <div className="settings-section">
       <h2 className="section-title">Param&egrave;tres</h2>
+
+      {/* === APPARENCE === */}
+      <div className="settings-card">
+        <h3 className="settings-card-title">Apparence</h3>
+        <div className="theme-toggle-row">
+          <div className="theme-toggle-info">
+            <span className="theme-toggle-icon">{isDark ? '\uD83C\uDF19' : '\u2600\uFE0F'}</span>
+            <div>
+              <span className="theme-toggle-label">{isDark ? 'Mode sombre' : 'Mode clair'}</span>
+              <span className="theme-toggle-hint">Changer l'apparence de l'application</span>
+            </div>
+          </div>
+          <button className={`theme-switch ${isDark ? '' : 'theme-switch-light'}`} onClick={toggleTheme}>
+            <span className="theme-switch-thumb" />
+          </button>
+        </div>
+      </div>
 
       {/* === PROFIL === */}
       <div className="settings-card">

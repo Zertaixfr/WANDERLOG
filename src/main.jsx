@@ -5,15 +5,18 @@ import App from './App.jsx'
 import { AuthProvider } from './contexts/AuthContext'
 import { ProjectProvider } from './contexts/ProjectContext'
 import { NotificationProvider } from './contexts/NotificationContext'
+import { ThemeProvider } from './contexts/ThemeContext'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <AuthProvider>
-      <ProjectProvider>
-        <NotificationProvider>
-          <App />
-        </NotificationProvider>
-      </ProjectProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <ProjectProvider>
+          <NotificationProvider>
+            <App />
+          </NotificationProvider>
+        </ProjectProvider>
+      </AuthProvider>
+    </ThemeProvider>
   </StrictMode>,
 )
