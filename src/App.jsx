@@ -11,6 +11,7 @@ import Stats from './components/Stats'
 import CreatePost from './components/CreatePost'
 import AddTrip from './components/AddTrip'
 import TravelerProfile from './components/TravelerProfile'
+import Timeline from './components/Timeline'
 import Settings from './components/Settings'
 import { DEMO_POSTS, DEMO_TRAVELER_STATUS } from './services/demoData'
 
@@ -144,6 +145,11 @@ function App() {
               {isOwner && <AddTrip onTripAdded={() => {}} />}
             </aside>
           </div>
+        )}
+
+        {/* Vue Timeline */}
+        {activeTab === 'timeline' && (
+          <Timeline trips={trips} posts={posts} />
         )}
 
         {/* Vue Journal */}

@@ -47,6 +47,7 @@ const Header = ({ activeTab, setActiveTab, posts, trips, onSearchResult }) => {
 
   const tabs = [
     { id: 'globe', label: 'Explorer', icon: '&#9992;' },
+    { id: 'timeline', label: 'Timeline', icon: '&#128340;' },
     { id: 'feed', label: 'Journal', icon: '&#9997;' },
     { id: 'stats', label: 'Aventure', icon: '&#9776;' },
     { id: 'settings', label: 'Param\u00e8tres', icon: '&#9881;' },
